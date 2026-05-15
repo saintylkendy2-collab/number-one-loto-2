@@ -4,7 +4,7 @@ const cookieParser = require('cookie-parser');
 const app = express();
 
 const DATA_FILE = 'vendeurs.json';
-const PORT = 3000;
+const PORT = 3001;
 
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
