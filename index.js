@@ -492,7 +492,7 @@ text-align:center;
 </head>
 <body>
 <form class="login-box" method="POST" action="/login">
-<div class="title">NUMBER ONE LOTO</div>
+<div class="title">NUMBER ONE LOTO 2</div>
 <div class="sub">Connexion vendeur</div>
 <input class="input" type="text" name="id" placeholder="Identifiant" autocomplete="username" required>
 <input class="input" type="password" name="password" placeholder="Mot de passe" autocomplete="current-password" required>
@@ -2571,7 +2571,7 @@ border-right:1px solid #ddd;
 
 <div id="drawer" class="drawer">
 <div class="drawer-head" style="display:flex;align-items:center;gap:12px;">
-<span>NUMBER ONE LOTO</span>
+<span>NUMBER ONE LOTO 2</span>
 </div>
 <div class="drawer-item" onclick="openDrawerTirages()">Tirages</div>
 <div class="drawer-item" onclick="openDrawerBalance()">Balance</div>
@@ -5559,7 +5559,7 @@ ${APP_CONFIG.ticketLogo ? `
 </div>
 ` : ""}
 
-<div class="title">NUMBER ONE LOTO</div>
+<div class="title">NUMBER ONE LOTO 2</div>
 
 <div class="meta">
 SELLER ${sellerName}<br>
@@ -5706,7 +5706,7 @@ body{
 </style>
 </head>
 <body>
-  <div class="title">NUMBER ONE LOTO</div>
+  <div class="title">NUMBER ONE LOTO 2</div>
   <div class="center">RAPPORT</div>
   <div class="center">${sellerName}</div>
   <div class="center">${formatFRDateInput(start)} / ${formatFRDateInput(end)}</div>

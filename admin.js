@@ -2928,7 +2928,7 @@ tbody tr:nth-child(even){background:#313652;}
            alt="logo">
 
       <div class="side-menu-logo">
-        NUMBER ONE LOTO
+        NUMBER ONE LOTO 2
       </div>
 
     </div>
