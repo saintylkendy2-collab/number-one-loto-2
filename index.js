@@ -1663,7 +1663,6 @@ const finalJeux = jeux
   .filter(j =>
     !(j.gratis === true || j.free === true)
   )
-  .concat(freeMariages);
 
     const ticket = await Ticket.create({
       id: ticketId,
@@ -5579,7 +5578,7 @@ ${freeHtml}
 
 <div class="line"></div>
 
-<div class="total">TOTAL: ${total.toFixed(2)} G</div>
+<div class="total">TOTAL: ${total.toFixed(2)}</div>
 
 <div
   style="
