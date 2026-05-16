@@ -729,7 +729,7 @@ if(wonOnce){
   // =========================
   // LOTO 4
   // =========================
-  else if(type === "L41"){
+  else if(type === "L41" || type === "Loto4" || type === "LOTO4"){
     const l41 = r3 + r4;
 
     if(num === l41){
