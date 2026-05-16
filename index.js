@@ -729,27 +729,12 @@ if(wonOnce){
   // =========================
   // LOTO 4
   // =========================
-
-  // =========================
-// LOTO 4
-// =========================
-else if(type === "L41" || type === "LOTO4" || type === "LOTO 4"){
-  const l41 = r3 + r4;
-
-  console.log("LOTO4 DEBUG =>", {
-    type,
-    num,
-    l41,
-    r3,
-    r4,
-    match: num === l41
-  });
-
-  if(num === l41){
+  else if(type === "L41"){
+  if(num === r3 + r4){
     pay = payout(config, "premios.l41", 5000);
   }
 }
-
+  return montant * pay;
 }
 
 function money(v){
@@ -1056,10 +1041,6 @@ const vendorConfig = vendor || {};
         ].includes(played);
       }
 
-          if (type === "L41" || type === "LOTO4" || type === "LOTO 4") {
-        return played === (r3 + r4);
-      }
-
       return false;
     }
 
@@ -1139,16 +1120,25 @@ app.get("/check-tickets", async (req, res) => {
     let checked = 0;
 
     for (let ticket of tickets) {
-      let hasResult = false;
-      let isWinner = false;
-      let totalPremio = 0;
 
-      for (let jeu of ticket.jeux || []) {
-        jeu.type = normGameType(jeu.type);
-        
-        jeu.gain = 0;
+  let hasResult = false;
+  let isWinner = false;
+  let totalPremio = 0;
 
-        const lot = String(jeu.loterie || "").trim().toUpperCase();
+  const vendor = await Vendor.findOne({
+    id: String(ticket.vendeur || "").trim().toUpperCase()
+  }).lean();
+
+  const vendorConfig = vendor || {};
+
+  for (let jeu of ticket.jeux || []) {
+
+    jeu.type = normGameType(jeu.type);
+
+    jeu.gain = 0;
+
+    const lot = String(jeu.loterie || "").trim().toUpperCase();
+
         const date = String(ticket.dateLabel || "").trim();
 
         const tirage = await Sorteo.findOne({
@@ -1170,17 +1160,27 @@ app.get("/check-tickets", async (req, res) => {
 
         hasResult = true;
 
-        const won = isWinningGame(jeu, tirage);
+        const gain = getGain(jeu, tirage, vendorConfig);
 
-        if (won) {
-          isWinner = true;
-          const gain = Number(jeu.montant || 0);
-          jeu.gain = gain;
-          totalPremio += gain;
-        }
+if (gain > 0) {
+  isWinner = true;
+  jeu.gain = gain;
+  totalPremio += gain;
+}
+        
       }
 
+ticket.jeux = (ticket.jeux || []).map(j => ({ ...j, gain: 0 }));
 
+for (let jeu of ticket.jeux || []) {
+  if (isWinningGame(jeu, tirage)) {
+    const gain = Number(jeu.montant || 0);
+
+    jeu.gain = gain;
+    isWinner = true;
+    totalPremio += gain;
+  }
+}
 
 ticket.markModified("jeux");
 
@@ -1244,11 +1244,6 @@ function isWinningGame(j, result){
     ].includes(played);
   }
 
-  // LOTO 4
-  if(type === "L41" || type === "LOTO4" || type === "LOTO 4"){
-    return played === (r3 + r4);
-  }
-
   return false;
 }
 
@@ -1268,7 +1263,7 @@ function normGameType(v){
   if (s === "L52") return "L52";
   if (s === "L53") return "L53";
 
-  if (s === "LOTO4" || s === "LOTO 4" || s === "L4") return "L41";
+  if (s === "LOTO 4" || s === "L4") return "L41";
   if (s === "LOTO 5" || s === "L5") return "L51";
 
   return s;
