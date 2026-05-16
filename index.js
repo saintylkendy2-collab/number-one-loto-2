@@ -492,7 +492,7 @@ text-align:center;
 </head>
 <body>
 <form class="login-box" method="POST" action="/login">
-<div class="title">NUMBER ONE LOTO</div>
+<div class="title">NUMBER ONE LOTO 2</div>
 <div class="sub">Connexion vendeur</div>
 <input class="input" type="text" name="id" placeholder="Identifiant" autocomplete="username" required>
 <input class="input" type="password" name="password" placeholder="Mot de passe" autocomplete="current-password" required>
@@ -729,55 +729,11 @@ if(wonOnce){
   // =========================
   // LOTO 4
   // =========================
-  else if(type === "L41"){
+  else if(type === "L41" || type === "Loto4" || type === "LOTO4"){
     const l41 = r3 + r4;
 
     if(num === l41){
       pay = payout(config, "premios.l41", 5000);
-    }
-  }
-
-  else if(type === "L42"){
-    const l42 = r2 + r4;
-
-    if(num === l42){
-      pay = payout(config, "premios.l42", 5000);
-    }
-  }
-
-  else if(type === "L43"){
-    const l43 = r2 + r3;
-
-    if(num === l43){
-      pay = payout(config, "premios.l43", 5000);
-    }
-  }
-
-  // =========================
-  // LOTO 5
-  // =========================
-  else if(type === "L51"){
-    const l51 = r1 + r2 + r3;
-
-    if(num === l51){
-      pay = payout(config, "premios.l51", 25000);
-    }
-  }
-
-  else if(type === "L52"){
-    const l52 = r1 + r2 + r4;
-
-    if(num === l52){
-      pay = payout(config, "premios.l52", 25000);
-    }
-  }
-
-  else if(type === "L53"){
-    const lastR2 = r2.slice(-1);
-    const l53 = lastR2 + r3 + r4;
-
-    if(num === l53){
-      pay = payout(config, "premios.l53", 25000);
     }
   }
 
@@ -1663,7 +1619,6 @@ const finalJeux = jeux
   .filter(j =>
     !(j.gratis === true || j.free === true)
   )
-  .concat(freeMariages);
 
     const ticket = await Ticket.create({
       id: ticketId,
@@ -2571,7 +2526,7 @@ border-right:1px solid #ddd;
 
 <div id="drawer" class="drawer">
 <div class="drawer-head" style="display:flex;align-items:center;gap:12px;">
-<span>NUMBER ONE LOTO</span>
+<span style="font-size:22px;">NUMBER ONE LOTO 2</span>
 </div>
 <div class="drawer-item" onclick="openDrawerTirages()">Tirages</div>
 <div class="drawer-item" onclick="openDrawerBalance()">Balance</div>
@@ -2584,7 +2539,7 @@ border-right:1px solid #ddd;
 <div id="optionsSheet" class="options-sheet">
 <div class="sheet-item" onclick="deleteAllGames()">Supprimer</div>
 <div class="sheet-item" onclick="autoMarriage()">Maryaj otomatik</div>
-<div class="sheet-item" onclick="autoLoto4()">L1 otomatik</div>
+<div class="sheet-item" onclick="autoLoto4()">Loto4 otomatik</div>
 </div>
 
 <div id="loterieModal" class="loterie-modal">
@@ -2805,11 +2760,12 @@ function press(val){
 
  if(activeField === "numero"){
    if(val === "+"){
-     if(numero.length === 4){
-       pendingChoiceNumber = numero;
-       showChoicePanel(["L1","L2","L3"]);
-       return;
-     }
+    if(numero.length === 4){
+  numero += "+";
+  activeField = "montant";
+  updateFields();
+  return;
+}
 
      if(numero.length === 5){
        pendingChoiceNumber = numero;
@@ -3074,6 +3030,13 @@ function buildGameEntries(num){
  if(/^\\d{4}\\/$/.test(num)){
    return buildSlashMarriageEntries(num);
  }
+
+if(/^\\d{4}\\+$/.test(num)){
+  return [{
+    type: "L41",
+    numero: num.replace("+", "")
+  }];
+}
 
  if(/^\\d{4}\\+(L1|L2|L3)(,(L1|L2|L3))*$/.test(num)){
    var raw4 = num.split("+")[0];
@@ -3366,7 +3329,7 @@ function renderJeux(){
      var row = document.createElement("div");
      row.className = "ticket-row";
      row.innerHTML =
-       '<div>' + j.type + '</div>' +
+       '<div>' + (j.type === "L41" ? "Loto4" : j.type) + '</div>' +
        '<div>' + j.numero + '</div>' +
        '<div>' + Number(j.montant).toFixed(2) + '</div>';
 
@@ -3696,7 +3659,7 @@ function renderBillets(){
         row.className = "billet-game";
 
         row.innerHTML =
-          '<div>' + j.type + '</div>' +
+          '<div>' + (j.type === "L41" ? "Loto4" : j.type) + '</div>' +
           '<div>' +
             j.numero + ' - ' + j.loterie +
             (gain > 0
@@ -4285,8 +4248,8 @@ function copyTicketById(){
       updateFields();
     };
 
-    items.forEach(function(item){
-    if(item.textContent.trim() === "L1 otomatik"){  
+     items.forEach(function(item){
+     if(item.textContent.trim() === "Loto4 otomatik"){
         item.parentNode.insertBefore(boulPe, item.nextSibling);
       }
     });
@@ -5431,6 +5394,8 @@ if (j.gratis === true || j.free === true) {
       let type = typeRaw;
       if (typeRaw === "BOR") type = "Borlette";
       else if (typeRaw === "MAR") type = "Mariage";
+      else if (typeRaw === "L41") type = "Loto4";
+
 
       let loterie =
   String(j.loterie || j.loteria || "").trim().toUpperCase();
@@ -5462,7 +5427,7 @@ let key =
 
       gamesHtml +=
         '<div class="game-row">' +
-          '<div class="col-type">' + g.type + '</div>' +
+          '<div class="col-type">' + (g.type === "L41" ? "Loto4" : g.type) + '</div>' +
           '<div class="col-num">' + g.numero + '</div>' +
           '<div class="col-amt">' + totalLine + '</div>' +
         '</div>';
@@ -5499,15 +5464,18 @@ Object.keys(freeMap).forEach(loterie => {
 
     let typeRaw = String(j.type || "").toUpperCase();
 
-    let type = typeRaw;
-    if (typeRaw === "BOR") type = "Borlette";
-    else if (typeRaw === "MAR") type = "Mariage";
+let type = typeRaw;
+
+if (typeRaw === "BOR") type = "Borlette";
+else if (typeRaw === "MAR") type = "Mariage";
+else if (typeRaw === "L41") type = "Loto4";
+    
 
     let numero = String(j.numero || "").trim();
 
     freeHtml +=
       '<div class="game-row">' +
-        '<div class="col-type">' + type + '</div>' +
+        '<div class="col-type">' + (type === "L41" ? "Loto4" : type) + '</div>' +
         '<div class="col-num">' + numero + '</div>' +
         '<div class="col-amt">Gratis</div>' +
       '</div>';
@@ -5559,7 +5527,7 @@ ${APP_CONFIG.ticketLogo ? `
 </div>
 ` : ""}
 
-<div class="title">NUMBER ONE LOTO</div>
+<div class="title">NUMBER ONE LOTO 2</div>
 
 <div class="meta">
 SELLER ${sellerName}<br>
@@ -5579,7 +5547,7 @@ ${freeHtml}
 
 <div class="line"></div>
 
-<div class="total">TOTAL: ${total.toFixed(2)} G</div>
+<div class="total">TOTAL: ${total.toFixed(2)}</div>
 
 <div
   style="
@@ -5706,7 +5674,7 @@ body{
 </style>
 </head>
 <body>
-  <div class="title">NUMBER ONE LOTO</div>
+  <div class="title">NUMBER ONE LOTO 2</div>
   <div class="center">RAPPORT</div>
   <div class="center">${sellerName}</div>
   <div class="center">${formatFRDateInput(start)} / ${formatFRDateInput(end)}</div>
