@@ -4248,8 +4248,8 @@ function copyTicketById(){
       updateFields();
     };
 
-    items.forEach(function(item){
-    if(item.textContent.trim() === "L1 otomatik"){  
+     items.forEach(function(item){
+     if(item.textContent.trim() === "Loto4 otomatik"){
         item.parentNode.insertBefore(boulPe, item.nextSibling);
       }
     });
