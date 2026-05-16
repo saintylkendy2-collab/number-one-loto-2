@@ -1178,17 +1178,7 @@ app.get("/check-tickets", async (req, res) => {
         }
       }
 
-ticket.jeux = (ticket.jeux || []).map(j => ({ ...j, gain: 0 }));
 
-for (let jeu of ticket.jeux || []) {
-  if (isWinningGame(jeu, tirage)) {
-    const gain = Number(jeu.montant || 0);
-
-    jeu.gain = gain;
-    isWinner = true;
-    totalPremio += gain;
-  }
-}
 
 ticket.markModified("jeux");
 
