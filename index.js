@@ -644,62 +644,6 @@ function getGain(j, tirage, config){
     }
   }
 
-  if(type === "MAR"){
-
-  const isGratis =
-    j.gratis === true ||
-    j.free === true ||
-    Number(j.montant || 0) === 0;
-
-  const parts = String(num)
-    .replace("-", "x")
-    .replace("*", "x")
-    .split("x")
-    .map(x => pad2(x));
-
-  const played = parts.join("");
-
-  const wins = [
-    r2 + r3,
-    r2 + r4,
-    r3 + r4
-  ];
-
-  if(wins.includes(played)){
-
-    if(isGratis){
-      return Number(j.payoutGratis || 0);
-    }
-
-    pay = payout(config, "premios.mariage", 1000);
-    return montant * pay;
-  }
-}
-
-
-const wins = [
-  r2 + r3,
-  r2 + r4,
-  r3 + r4
-];
-
-const parts = String(num)
-  .replace("-", "x")
-  .replace("*", "x")
-  .split("x")
-  .map(x => pad2(x));
-
-const played = parts.join("");
-
-const wonOnce = wins.some(function(w){
-  return w === played;
-});
-
-if(wonOnce){
-  return Number(j.payoutGratis || 0);
-}
-
-
   // =========================
   // MARIAGE
   // =========================
@@ -729,11 +673,55 @@ if(wonOnce){
   // =========================
   // LOTO 4
   // =========================
-  else if(type === "L41" || type === "Loto4" || type === "LOTO4"){
+  else if(type === "L41"){
     const l41 = r3 + r4;
 
     if(num === l41){
       pay = payout(config, "premios.l41", 5000);
+    }
+  }
+
+  else if(type === "L42"){
+    const l42 = r2 + r4;
+
+    if(num === l42){
+      pay = payout(config, "premios.l42", 5000);
+    }
+  }
+
+  else if(type === "L43"){
+    const l43 = r2 + r3;
+
+    if(num === l43){
+      pay = payout(config, "premios.l43", 5000);
+    }
+  }
+
+  // =========================
+  // LOTO 5
+  // =========================
+  else if(type === "L51"){
+    const l51 = r1 + r2 + r3;
+
+    if(num === l51){
+      pay = payout(config, "premios.l51", 25000);
+    }
+  }
+
+  else if(type === "L52"){
+    const l52 = r1 + r2 + r4;
+
+    if(num === l52){
+      pay = payout(config, "premios.l52", 25000);
+    }
+  }
+
+  else if(type === "L53"){
+    const lastR2 = r2.slice(-1);
+    const l53 = lastR2 + r3 + r4;
+
+    if(num === l53){
+      pay = payout(config, "premios.l53", 25000);
     }
   }
 
