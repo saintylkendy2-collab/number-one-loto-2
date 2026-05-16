@@ -2571,7 +2571,7 @@ border-right:1px solid #ddd;
 
 <div id="drawer" class="drawer">
 <div class="drawer-head" style="display:flex;align-items:center;gap:12px;">
-<span style="font-size:22px;">NUMBER ONE LOTO 2</span>
+<span>NUMBER ONE LOTO</span>
 </div>
 <div class="drawer-item" onclick="openDrawerTirages()">Tirages</div>
 <div class="drawer-item" onclick="openDrawerBalance()">Balance</div>
@@ -2584,7 +2584,7 @@ border-right:1px solid #ddd;
 <div id="optionsSheet" class="options-sheet">
 <div class="sheet-item" onclick="deleteAllGames()">Supprimer</div>
 <div class="sheet-item" onclick="autoMarriage()">Maryaj otomatik</div>
-<div class="sheet-item" onclick="autoLoto4()">Loto4 otomatik</div>
+<div class="sheet-item" onclick="autoLoto4()">L1 otomatik</div>
 </div>
 
 <div id="loterieModal" class="loterie-modal">
@@ -2805,12 +2805,11 @@ function press(val){
 
  if(activeField === "numero"){
    if(val === "+"){
-    if(numero.length === 4){
-  numero += "+";
-  activeField = "montant";
-  updateFields();
-  return;
-}
+     if(numero.length === 4){
+       pendingChoiceNumber = numero;
+       showChoicePanel(["L1","L2","L3"]);
+       return;
+     }
 
      if(numero.length === 5){
        pendingChoiceNumber = numero;
@@ -3075,13 +3074,6 @@ function buildGameEntries(num){
  if(/^\\d{4}\\/$/.test(num)){
    return buildSlashMarriageEntries(num);
  }
-
-if(/^\\d{4}\\+$/.test(num)){
-  return [{
-    type: "L41",
-    numero: num.replace("+", "")
-  }];
-}
 
  if(/^\\d{4}\\+(L1|L2|L3)(,(L1|L2|L3))*$/.test(num)){
    var raw4 = num.split("+")[0];
