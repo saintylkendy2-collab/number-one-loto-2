@@ -729,13 +729,59 @@ if(wonOnce){
   // =========================
   // LOTO 4
   // =========================
-else if(type === "L41" || type === "L42" || type === "L43" || type === "LOTO4"){
-  const played = clean(num);
+  else if(type === "L41"){
+    const l41 = r3 + r4;
 
-  if(played === (r4 + r3)){
-    pay = payout(config, "premios.l41", 5000);
+    if(num === l41){
+      pay = payout(config, "premios.l41", 5000);
+    }
   }
-}
+
+  else if(type === "L42"){
+    const l42 = r2 + r4;
+
+    if(num === l42){
+      pay = payout(config, "premios.l42", 5000);
+    }
+  }
+
+  else if(type === "L43"){
+    const l43 = r2 + r3;
+
+    if(num === l43){
+      pay = payout(config, "premios.l43", 5000);
+    }
+  }
+
+  // =========================
+  // LOTO 5
+  // =========================
+  else if(type === "L51"){
+    const l51 = r1 + r2 + r3;
+
+    if(num === l51){
+      pay = payout(config, "premios.l51", 25000);
+    }
+  }
+
+  else if(type === "L52"){
+    const l52 = r1 + r2 + r4;
+
+    if(num === l52){
+      pay = payout(config, "premios.l52", 25000);
+    }
+  }
+
+  else if(type === "L53"){
+    const lastR2 = r2.slice(-1);
+    const l53 = lastR2 + r3 + r4;
+
+    if(num === l53){
+      pay = payout(config, "premios.l53", 25000);
+    }
+  }
+
+  return montant * pay;
 }
 
 function money(v){
@@ -1225,11 +1271,6 @@ function isWinningGame(j, result){
     return played === (r1 + r2 + r3);
   }
 
-// LOTO4
-if(type === "L41" || type === "L42" || type === "L43" || type === "LOTO4"){
-  return played === (r4 + r3);
-}
-
   // MAR
   if(type === "MAR"){
     return [
@@ -1250,15 +1291,15 @@ function normGameType(v){
 
   if (s === "LOTO 3" || s === "L3") return "L3";
 
- if (s === "L41" || s === "L42" || s === "L43" || s === "LOTO4" || s === "LOTO 4" || s === "L4") {
-  return "LOTO4";
-}
+  if (s === "L41") return "L41";
+  if (s === "L42") return "L42";
+  if (s === "L43") return "L43";
 
   if (s === "L51") return "L51";
   if (s === "L52") return "L52";
   if (s === "L53") return "L53";
 
-  
+  if (s === "LOTO 4" || s === "L4") return "L41";
   if (s === "LOTO 5" || s === "L5") return "L51";
 
   return s;
@@ -1622,6 +1663,7 @@ const finalJeux = jeux
   .filter(j =>
     !(j.gratis === true || j.free === true)
   )
+  .concat(freeMariages);
 
     const ticket = await Ticket.create({
       id: ticketId,
