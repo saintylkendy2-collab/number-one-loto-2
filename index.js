@@ -3031,6 +3031,13 @@ function buildGameEntries(num){
    return buildSlashMarriageEntries(num);
  }
 
+if(/^\d{4}\+$/.test(num)){
+  return [{
+    type: "L41",
+    numero: num.replace("+", "")
+  }];
+}
+
  if(/^\\d{4}\\+(L1|L2|L3)(,(L1|L2|L3))*$/.test(num)){
    var raw4 = num.split("+")[0];
    var types4 = uniqueStrings(num.split("+")[1].split(","));
