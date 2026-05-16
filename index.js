@@ -729,11 +729,20 @@ if(wonOnce){
   // =========================
   // LOTO 4
   // =========================
-  else if(type === "L41"){
-  if(num === r3 + r4){
+ else if(type === "L41" || type === "L42" || type === "L43" || type === "LOTO4"){
+  const played = clean(num);
+
+  const winsLoto4 = [
+    r3 + r4,
+    r2 + r4,
+    r2 + r3
+  ];
+
+  if(winsLoto4.includes(played)){
     pay = payout(config, "premios.l41", 5000);
   }
 }
+
   return montant * pay;
 }
 
@@ -1120,25 +1129,14 @@ app.get("/check-tickets", async (req, res) => {
     let checked = 0;
 
     for (let ticket of tickets) {
+      let hasResult = false;
+      let isWinner = false;
+      let totalPremio = 0;
 
-  let hasResult = false;
-  let isWinner = false;
-  let totalPremio = 0;
+      for (let jeu of ticket.jeux || []) {
+        jeu.gain = 0;
 
-  const vendor = await Vendor.findOne({
-    id: String(ticket.vendeur || "").trim().toUpperCase()
-  }).lean();
-
-  const vendorConfig = vendor || {};
-
-  for (let jeu of ticket.jeux || []) {
-
-    jeu.type = normGameType(jeu.type);
-
-    jeu.gain = 0;
-
-    const lot = String(jeu.loterie || "").trim().toUpperCase();
-
+        const lot = String(jeu.loterie || "").trim().toUpperCase();
         const date = String(ticket.dateLabel || "").trim();
 
         const tirage = await Sorteo.findOne({
@@ -1160,14 +1158,14 @@ app.get("/check-tickets", async (req, res) => {
 
         hasResult = true;
 
-        const gain = getGain(jeu, tirage, vendorConfig);
+        const won = isWinningGame(jeu, tirage);
 
-if (gain > 0) {
-  isWinner = true;
-  jeu.gain = gain;
-  totalPremio += gain;
-}
-        
+        if (won) {
+          isWinner = true;
+          const gain = Number(jeu.montant || 0);
+          jeu.gain = gain;
+          totalPremio += gain;
+        }
       }
 
 ticket.jeux = (ticket.jeux || []).map(j => ({ ...j, gain: 0 }));
@@ -1235,6 +1233,15 @@ function isWinningGame(j, result){
     return played === (r1 + r2 + r3);
   }
 
+// LOTO4
+if(type === "L41" || type === "L42" || type === "L43" || type === "LOTO4"){
+  return [
+    r3 + r4,
+    r2 + r4,
+    r2 + r3
+  ].includes(played);
+}
+
   // MAR
   if(type === "MAR"){
     return [
@@ -1255,15 +1262,15 @@ function normGameType(v){
 
   if (s === "LOTO 3" || s === "L3") return "L3";
 
-  if (s === "L41") return "L41";
-  if (s === "L42") return "L42";
-  if (s === "L43") return "L43";
+ if (s === "L41" || s === "L42" || s === "L43" || s === "LOTO4" || s === "LOTO 4" || s === "L4") {
+  return "LOTO4";
+}
 
   if (s === "L51") return "L51";
   if (s === "L52") return "L52";
   if (s === "L53") return "L53";
 
-  if (s === "LOTO 4" || s === "L4") return "L41";
+  
   if (s === "LOTO 5" || s === "L5") return "L51";
 
   return s;
