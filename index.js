@@ -5427,7 +5427,7 @@ let key =
 
       gamesHtml +=
         '<div class="game-row">' +
-          '<div class="col-type">' + g.type + '</div>' +
+          '<div class="col-type">' + (g.type === "L41" ? "Loto4" : g.type) + '</div>' +
           '<div class="col-num">' + g.numero + '</div>' +
           '<div class="col-amt">' + totalLine + '</div>' +
         '</div>';
@@ -5467,7 +5467,7 @@ Object.keys(freeMap).forEach(loterie => {
     let type = typeRaw;
     if (typeRaw === "BOR") type = "Borlette";
     else if (typeRaw === "MAR") type = "Mariage";
-    else if (typeRaw === "L41") type = "Loto4";
+    
 
     let numero = String(j.numero || "").trim();
 
