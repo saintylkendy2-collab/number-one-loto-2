@@ -737,50 +737,6 @@ if(wonOnce){
     }
   }
 
-  else if(type === "L42"){
-    const l42 = r2 + r4;
-
-    if(num === l42){
-      pay = payout(config, "premios.l42", 5000);
-    }
-  }
-
-  else if(type === "L43"){
-    const l43 = r2 + r3;
-
-    if(num === l43){
-      pay = payout(config, "premios.l43", 5000);
-    }
-  }
-
-  // =========================
-  // LOTO 5
-  // =========================
-  else if(type === "L51"){
-    const l51 = r1 + r2 + r3;
-
-    if(num === l51){
-      pay = payout(config, "premios.l51", 25000);
-    }
-  }
-
-  else if(type === "L52"){
-    const l52 = r1 + r2 + r4;
-
-    if(num === l52){
-      pay = payout(config, "premios.l52", 25000);
-    }
-  }
-
-  else if(type === "L53"){
-    const lastR2 = r2.slice(-1);
-    const l53 = lastR2 + r3 + r4;
-
-    if(num === l53){
-      pay = payout(config, "premios.l53", 25000);
-    }
-  }
-
   return montant * pay;
 }
 
