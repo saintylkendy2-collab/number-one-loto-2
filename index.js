@@ -3329,7 +3329,7 @@ function renderJeux(){
      var row = document.createElement("div");
      row.className = "ticket-row";
      row.innerHTML =
-       '<div>' + j.type + '</div>' +
+       '<div>' + (j.type === "L41" ? "Loto4" : j.type) + '</div>' +
        '<div>' + j.numero + '</div>' +
        '<div>' + Number(j.montant).toFixed(2) + '</div>';
 
@@ -3659,7 +3659,7 @@ function renderBillets(){
         row.className = "billet-game";
 
         row.innerHTML =
-          '<div>' + j.type + '</div>' +
+          '<div>' + (j.type === "L41" ? "Loto4" : j.type) + '</div>' +
           '<div>' +
             j.numero + ' - ' + j.loterie +
             (gain > 0
