@@ -729,21 +729,13 @@ if(wonOnce){
   // =========================
   // LOTO 4
   // =========================
- else if(type === "L41" || type === "L42" || type === "L43" || type === "LOTO4"){
+if(type === "L41" || type === "L42" || type === "L43" || type === "LOTO4"){
   const played = clean(num);
 
-  const winsLoto4 = [
-    r3 + r4,
-    r2 + r4,
-    r2 + r3
-  ];
-
-  if(winsLoto4.includes(played)){
+  if(played === (r3 + r4)){
     pay = payout(config, "premios.l41", 5000);
   }
 }
-
-  return montant * pay;
 }
 
 function money(v){
