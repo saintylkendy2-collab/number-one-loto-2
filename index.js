@@ -729,15 +729,27 @@ if(wonOnce){
   // =========================
   // LOTO 4
   // =========================
-  else if(type === "L41" || type === "Loto4" || type === "LOTO4"){
-    const l41 = r3 + r4;
 
-    if(num === l41){
-      pay = payout(config, "premios.l41", 5000);
-    }
+  // =========================
+// LOTO 4
+// =========================
+else if(type === "L41" || type === "LOTO4" || type === "LOTO 4"){
+  const l41 = r3 + r4;
+
+  console.log("LOTO4 DEBUG =>", {
+    type,
+    num,
+    l41,
+    r3,
+    r4,
+    match: num === l41
+  });
+
+  if(num === l41){
+    pay = payout(config, "premios.l41", 5000);
   }
+}
 
-  return montant * pay;
 }
 
 function money(v){
