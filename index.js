@@ -1144,6 +1144,8 @@ app.get("/check-tickets", async (req, res) => {
       let totalPremio = 0;
 
       for (let jeu of ticket.jeux || []) {
+        jeu.type = normGameType(jeu.type);
+        
         jeu.gain = 0;
 
         const lot = String(jeu.loterie || "").trim().toUpperCase();
