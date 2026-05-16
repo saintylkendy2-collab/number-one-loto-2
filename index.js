@@ -2539,7 +2539,7 @@ border-right:1px solid #ddd;
 <div id="optionsSheet" class="options-sheet">
 <div class="sheet-item" onclick="deleteAllGames()">Supprimer</div>
 <div class="sheet-item" onclick="autoMarriage()">Maryaj otomatik</div>
-<div class="sheet-item" onclick="autoLoto4()">L1 otomatik</div>
+<div class="sheet-item" onclick="autoLoto4()">Loto4 otomatik</div>
 </div>
 
 <div id="loterieModal" class="loterie-modal">
@@ -2760,11 +2760,12 @@ function press(val){
 
  if(activeField === "numero"){
    if(val === "+"){
-     if(numero.length === 4){
-       pendingChoiceNumber = numero;
-       showChoicePanel(["L1","L2","L3"]);
-       return;
-     }
+    if(numero.length === 4){
+  numero += "+";
+  activeField = "montant";
+  updateFields();
+  return;
+}
 
      if(numero.length === 5){
        pendingChoiceNumber = numero;
