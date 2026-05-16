@@ -492,7 +492,7 @@ text-align:center;
 </head>
 <body>
 <form class="login-box" method="POST" action="/login">
-<div class="title">NUMBER ONE LOTO 2</div>
+<div class="title">NUMBER ONE LOTO</div>
 <div class="sub">Connexion vendeur</div>
 <input class="input" type="text" name="id" placeholder="Identifiant" autocomplete="username" required>
 <input class="input" type="password" name="password" placeholder="Mot de passe" autocomplete="current-password" required>
