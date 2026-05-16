@@ -5394,6 +5394,8 @@ if (j.gratis === true || j.free === true) {
       let type = typeRaw;
       if (typeRaw === "BOR") type = "Borlette";
       else if (typeRaw === "MAR") type = "Mariage";
+      else if (typeRaw === "L41") type = "Loto4";
+
 
       let loterie =
   String(j.loterie || j.loteria || "").trim().toUpperCase();
