@@ -1044,6 +1044,10 @@ const vendorConfig = vendor || {};
         ].includes(played);
       }
 
+          if (type === "L41" || type === "LOTO4" || type === "LOTO 4") {
+        return played === (r3 + r4);
+      }
+
       return false;
     }
 
@@ -1236,6 +1240,11 @@ function isWinningGame(j, result){
     ].includes(played);
   }
 
+  // LOTO 4
+  if(type === "L41" || type === "LOTO4" || type === "LOTO 4"){
+    return played === (r3 + r4);
+  }
+
   return false;
 }
 
@@ -1255,7 +1264,7 @@ function normGameType(v){
   if (s === "L52") return "L52";
   if (s === "L53") return "L53";
 
-  if (s === "LOTO 4" || s === "L4") return "L41";
+  if (s === "LOTO4" || s === "LOTO 4" || s === "L4") return "L41";
   if (s === "LOTO 5" || s === "L5") return "L51";
 
   return s;
