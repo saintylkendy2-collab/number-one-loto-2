@@ -5464,16 +5464,18 @@ Object.keys(freeMap).forEach(loterie => {
 
     let typeRaw = String(j.type || "").toUpperCase();
 
-    let type = typeRaw;
-    if (typeRaw === "BOR") type = "Borlette";
-    else if (typeRaw === "MAR") type = "Mariage";
+let type = typeRaw;
+
+if (typeRaw === "BOR") type = "Borlette";
+else if (typeRaw === "MAR") type = "Mariage";
+else if (typeRaw === "L41") type = "Loto4";
     
 
     let numero = String(j.numero || "").trim();
 
     freeHtml +=
       '<div class="game-row">' +
-        '<div class="col-type">' + type + '</div>' +
+        '<div class="col-type">' + (type === "L41" ? "Loto4" : type) + '</div>' +
         '<div class="col-num">' + numero + '</div>' +
         '<div class="col-amt">Gratis</div>' +
       '</div>';
