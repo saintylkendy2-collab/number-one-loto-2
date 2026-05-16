@@ -3366,7 +3366,7 @@ function renderJeux(){
      var row = document.createElement("div");
      row.className = "ticket-row";
      row.innerHTML =
-       '<div>' + (j.type === "L41" ? "Loto4" : j.type) + '</div>' +
+       '<div>' + j.type + '</div>' +
        '<div>' + j.numero + '</div>' +
        '<div>' + Number(j.montant).toFixed(2) + '</div>';
 
@@ -3696,7 +3696,7 @@ function renderBillets(){
         row.className = "billet-game";
 
         row.innerHTML =
-          '<div>' + (j.type === "L41" ? "Loto4" : j.type) + '</div>' +
+          '<div>' + j.type + '</div>' +
           '<div>' +
             j.numero + ' - ' + j.loterie +
             (gain > 0
@@ -4285,8 +4285,8 @@ function copyTicketById(){
       updateFields();
     };
 
-     items.forEach(function(item){
-     if(item.textContent.trim() === "Loto4 otomatik"){
+    items.forEach(function(item){
+    if(item.textContent.trim() === "L1 otomatik"){  
         item.parentNode.insertBefore(boulPe, item.nextSibling);
       }
     });
@@ -5431,8 +5431,6 @@ if (j.gratis === true || j.free === true) {
       let type = typeRaw;
       if (typeRaw === "BOR") type = "Borlette";
       else if (typeRaw === "MAR") type = "Mariage";
-      else if (typeRaw === "L41") type = "Loto4";
-
 
       let loterie =
   String(j.loterie || j.loteria || "").trim().toUpperCase();
@@ -5464,7 +5462,7 @@ let key =
 
       gamesHtml +=
         '<div class="game-row">' +
-          '<div class="col-type">' + (g.type === "L41" ? "Loto4" : g.type) + '</div>' +
+          '<div class="col-type">' + g.type + '</div>' +
           '<div class="col-num">' + g.numero + '</div>' +
           '<div class="col-amt">' + totalLine + '</div>' +
         '</div>';
@@ -5501,18 +5499,15 @@ Object.keys(freeMap).forEach(loterie => {
 
     let typeRaw = String(j.type || "").toUpperCase();
 
-let type = typeRaw;
-
-if (typeRaw === "BOR") type = "Borlette";
-else if (typeRaw === "MAR") type = "Mariage";
-else if (typeRaw === "L41") type = "Loto4";
-    
+    let type = typeRaw;
+    if (typeRaw === "BOR") type = "Borlette";
+    else if (typeRaw === "MAR") type = "Mariage";
 
     let numero = String(j.numero || "").trim();
 
     freeHtml +=
       '<div class="game-row">' +
-        '<div class="col-type">' + (type === "L41" ? "Loto4" : type) + '</div>' +
+        '<div class="col-type">' + type + '</div>' +
         '<div class="col-num">' + numero + '</div>' +
         '<div class="col-amt">Gratis</div>' +
       '</div>';
@@ -5564,7 +5559,7 @@ ${APP_CONFIG.ticketLogo ? `
 </div>
 ` : ""}
 
-<div class="title">NUMBER ONE LOTO 2</div>
+<div class="title">NUMBER ONE LOTO</div>
 
 <div class="meta">
 SELLER ${sellerName}<br>
@@ -5584,7 +5579,7 @@ ${freeHtml}
 
 <div class="line"></div>
 
-<div class="total">TOTAL: ${total.toFixed(2)}</div>
+<div class="total">TOTAL: ${total.toFixed(2)} G</div>
 
 <div
   style="
@@ -5711,7 +5706,7 @@ body{
 </style>
 </head>
 <body>
-  <div class="title">NUMBER ONE LOTO 2</div>
+  <div class="title">NUMBER ONE LOTO</div>
   <div class="center">RAPPORT</div>
   <div class="center">${sellerName}</div>
   <div class="center">${formatFRDateInput(start)} / ${formatFRDateInput(end)}</div>
