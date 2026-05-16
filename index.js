@@ -729,10 +729,10 @@ if(wonOnce){
   // =========================
   // LOTO 4
   // =========================
-if(type === "L41" || type === "L42" || type === "L43" || type === "LOTO4"){
+else if(type === "L41" || type === "L42" || type === "L43" || type === "LOTO4"){
   const played = clean(num);
 
-  if(played === (r3 + r4)){
+  if(played === (r4 + r3)){
     pay = payout(config, "premios.l41", 5000);
   }
 }
@@ -1227,11 +1227,7 @@ function isWinningGame(j, result){
 
 // LOTO4
 if(type === "L41" || type === "L42" || type === "L43" || type === "LOTO4"){
-  return [
-    r3 + r4,
-    r2 + r4,
-    r2 + r3
-  ].includes(played);
+  return played === (r4 + r3);
 }
 
   // MAR
