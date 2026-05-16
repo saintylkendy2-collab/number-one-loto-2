@@ -3031,7 +3031,7 @@ function buildGameEntries(num){
    return buildSlashMarriageEntries(num);
  }
 
-if(/^\d{4}\+$/.test(num)){
+if(/^\\d{4}\\+$/.test(num)){
   return [{
     type: "L41",
     numero: num.replace("+", "")
