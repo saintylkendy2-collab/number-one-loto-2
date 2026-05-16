@@ -2539,7 +2539,7 @@ border-right:1px solid #ddd;
 <div id="optionsSheet" class="options-sheet">
 <div class="sheet-item" onclick="deleteAllGames()">Supprimer</div>
 <div class="sheet-item" onclick="autoMarriage()">Maryaj otomatik</div>
-<div class="sheet-item" onclick="autoLoto4()">Loto4 otomatik</div>
+<div class="sheet-item" onclick="autoLoto4()">L1 otomatik</div>
 </div>
 
 <div id="loterieModal" class="loterie-modal">
