@@ -3613,9 +3613,9 @@ function renderBillets(){
     card.className = "billet-card";
 
     var premioTotal = Number(t.premio || 0);
-    var premioTxt = premioTotal > 0
-      ? '<div class="billet-meta" style="font-weight:800;color:#157347;">Gain total: ' + fmt(premioTotal) + '</div>'
-      : '';
+      var premioTxt = premioTotal > 0 && t.status !== "ANILE"
+  ? '<div class="billet-meta" style="font-weight:800;color:#157347;">Gain total: ' + fmt(premioTotal) + '</div>'
+  : '';
 
    card.innerHTML =
   '<div class="billet-head">' +
