@@ -3642,17 +3642,21 @@ function renderBillets(){
   '</div>';
 
     if(Array.isArray(t.jeux)){
-      t.jeux.forEach(function(j){
-        var gain = Number(j.gain || 0);
+t.jeux.forEach(function(j){
 
-        var row = document.createElement("div");
+      var statusTxt = String(t.status || "").toUpperCase().trim();
+  var isAnile = statusTxt === "ANILE" || statusTxt === "ANULE" || statusTxt === "ANULADO";
+
+  var gain = Number(j.gain || 0);
+
+  var row = document.createElement("div");
         row.className = "billet-game";
 
         row.innerHTML =
           '<div>' + (j.type === "L41" ? "Loto4" : j.type) + '</div>' +
           '<div>' +
             j.numero + ' - ' + j.loterie +
-            (gain > 0
+            (!isAnile && gain > 0
               ? ' <span style="background:#d1f7de;color:#157347;font-size:12px;font-weight:900;padding:2px 6px;border-radius:8px;margin-left:6px;">+' + fmt(gain) + '</span>'
               : '') +
           '</div>' +
