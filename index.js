@@ -781,7 +781,7 @@ if (credit <= 0) {
     else if (type === "MAR") limit = Number(limites.mariage || 0);
     else if (type === "L3") limit = Number(limites.loto3 || 0);
    else if (type === "L41" || type === "L42" || type === "L43") limit = Number(limites.loto4 || 0);
-else if (type === "L51" || type === "L52" || type === "L53") limit = Number(limites.loto5 || 0); 
+else if (type === "L51" || type === "L52" || type === "L53") limit = Number(limites.loto5 || 0);
 
 const special = (limites.limiteNumeros || []).find(x =>
   normGameType(x.type) === type &&
@@ -3353,21 +3353,21 @@ function buildPayloadGames(){
 }
 
 function buildPrintableTextFromTicket(ticket){
-  if(!ticket || !Array.isArray(ticket.jeux)) return "";
+  if(!ticket || !Array.isArray(ticket.jeux)) return "";
 
-  var lines = [];
+  var lines = [];
 
-  ticket.jeux.forEach(function(j){
-    lines.push(
-      String(j.type || "") + " " +
-      String(j.numero || "") + " " +
-      Number(j.montant || 0).toFixed(2) +
-      " - " +
-      String(j.loterie || "")
-    );
-  });
+  ticket.jeux.forEach(function(j){
+    lines.push(
+      String(j.type || "") + " " +
+      String(j.numero || "") + " " +
+      Number(j.montant || 0).toFixed(2) +
+      " - " +
+      String(j.loterie || "")
+    );
+  });
 
-  return lines.join("\\n");
+  return lines.join("\\n");
 }
 
 
@@ -3670,7 +3670,7 @@ actions.innerHTML =
   '<button class="small-btn btn-yellow">LOTERIE</button>' +
   '<button class="small-btn btn-yellow">MONTANT</button>' +
   '<button class="small-btn btn-gray">PRINT</button>' +
-  '<button class="small-btn btn-gray">ANILE</button>'; 
+  '<button class="small-btn btn-gray">ANILE</button>';
 
     var btns = actions.querySelectorAll("button");
 
@@ -3724,7 +3724,7 @@ btns[4].onclick = function(e){
   if(confirm("Ou sèten ou vle anile ticket sa?")){
     updateTicketStatus(t.id, "ANILE");
   }
-}; 
+};
 
     card.appendChild(actions);
     wrap.appendChild(card);
@@ -5459,7 +5459,7 @@ let type = typeRaw;
 if (typeRaw === "BOR") type = "Borlette";
 else if (typeRaw === "MAR") type = "Mariage";
 else if (typeRaw === "L41") type = "Loto4";
-    
+   
 
     let numero = String(j.numero || "").trim();
 
