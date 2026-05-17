@@ -41,7 +41,7 @@ mongoose.connect(
   process.env.MONGO_URI || "mongodb://127.0.0.1:27017/number_one_loto_2"
 )
 .then(async () => {
-  console.log("Mongo connecté");
+  console.log("Mongo connectÃ©");
   await loadLimites();
 })
 .catch(err => console.error("Mongo erreur:", err.message));
@@ -61,7 +61,7 @@ mongoose.connection.once("open", async () => {
       ]
     });
 
-    console.log("✅ Tickets id null supprimés");
+    console.log("âœ… Tickets id null supprimÃ©s");
 
   } catch (err) {
     console.error("Erreur nettoyage tickets null:", err.message);
@@ -167,7 +167,7 @@ function loginErrorPage(message) {
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Login échoué</title>
+<title>Login Ã©chouÃ©</title>
 <style>
 body{
 margin:0;
@@ -514,17 +514,17 @@ app.post("/login", async (req, res) => {
     const vendeur = await Vendor.findOne({ id });
 
     if (!vendeur) {
-      return res.send(loginErrorPage("ID pa egziste ✖"));
+      return res.send(loginErrorPage("ID pa egziste âœ–"));
     }
 
     const savedPassword = String(vendeur.password || vendeur.clave || "").trim();
 
     if (password !== savedPassword) {
-      return res.send(loginErrorPage("Identifiant ou mot de passe incorrect ✖"));
+      return res.send(loginErrorPage("Identifiant ou mot de passe incorrect âœ–"));
     }
 
     if (String(vendeur.estatus || "").toLowerCase() === "bloqueado") {
-      return res.send(loginErrorPage("Vandè sa bloke ✖"));
+      return res.send(loginErrorPage("VandÃ¨ sa bloke âœ–"));
     }
 
     if (!Array.isArray(vendeur.conexiones)) vendeur.conexiones = [];
@@ -559,7 +559,7 @@ app.post("/login", async (req, res) => {
         return res.redirect("/dashboard?id=" + encodeURIComponent(id));
       }
 
-      return res.send(loginErrorPage("ID sa konekte deja ✖"));
+      return res.send(loginErrorPage("ID sa konekte deja âœ–"));
     }
 
     vendeur.conexiones.push(connRow);
@@ -573,7 +573,7 @@ app.post("/login", async (req, res) => {
 
   } catch (err) {
     console.error("LOGIN ERROR:", err.message);
-    return res.send(loginErrorPage("Erreur login ✖"));
+    return res.send(loginErrorPage("Erreur login âœ–"));
   }
 });
 
@@ -746,7 +746,7 @@ app.post("/api/check-limit-game", async (req, res) => {
     const montant = Number(req.body.montant || 0);
 
     const vendor = await Vendor.findOne({ id: sellerId }).lean();
-    if (!vendor) return res.json({ ok:false, message:"Vandè pa jwenn" });
+    if (!vendor) return res.json({ ok:false, message:"VandÃ¨ pa jwenn" });
 
     const credit = Number(vendor?.config?.credito || vendor?.credito || 0);
 
@@ -769,10 +769,10 @@ if (credit <= 0) {
 
     if (blocked) {
       return res.json({ ok:false, message:
-  "❌ " + loterie + "\n" +
+  "âŒ " + loterie + "\n" +
   type + " " + numero + "\n\n" +
   "Nimewo sa bloke.\n" +
-  "Ou pa ka vann jwèt sa."});
+  "Ou pa ka vann jwÃ¨t sa."});
     }
 
     let limit = 0;
@@ -830,11 +830,11 @@ if (special) {
 
     if (reste <= 0) {
       return res.json({ ok:false, message:
-  "❌ " + loterie + "\n" +
+  "âŒ " + loterie + "\n" +
   type + " " + numero + "\n\n" +
   "Limit: " + limit.toFixed(2) + "\n" +
   "Deja vann: " + dejaVendu.toFixed(2) + "\n" +
-  "Rès disponib: 0.00\n\n" +
+  "RÃ¨s disponib: 0.00\n\n" +
   "Limit nimewo sa fini."});
     }
 
@@ -842,13 +842,13 @@ if (special) {
       return res.json({
         ok:false,
         message:
-  "❌ " + loterie + "\n" +
+  "âŒ " + loterie + "\n" +
   type + " " + numero + "\n\n" +
   "Limit: " + limit.toFixed(2) + "\n" +
   "Deja vann: " + dejaVendu.toFixed(2) + "\n" +
-  "Rès disponib: " + reste.toFixed(2) + "\n\n" +
+  "RÃ¨s disponib: " + reste.toFixed(2) + "\n\n" +
   "Ou te mande: " + montant.toFixed(2) + "\n" +
-  "Ou ka vann sèlman: " + reste.toFixed(2)
+  "Ou ka vann sÃ¨lman: " + reste.toFixed(2)
       });
     }
 
@@ -892,7 +892,7 @@ async function loadLimites(){
           : []
       };
 
-      console.log("✅ LIMITES CHARGÉS");
+      console.log("âœ… LIMITES CHARGÃ‰S");
     }
 
   }catch(err){
@@ -929,7 +929,7 @@ await Limites.findOneAndUpdate(
 );
 
 
-    console.log("✅ LIMITES SAUVEGARDÉS MONGO");
+    console.log("âœ… LIMITES SAUVEGARDÃ‰S MONGO");
 
     res.json({
       ok:true
@@ -1013,7 +1013,7 @@ const vendorConfig = vendor || {};
       const type = String(j.type || "").trim().toUpperCase();
       const played = clean(j.numero);
 
-      const r1 = clean(tirage.r1);  // tèt
+      const r1 = clean(tirage.r1);  // tÃ¨t
       const r2 = pad2(tirage.r2);
       const r3 = pad2(tirage.r3);
       const r4 = pad2(tirage.r4);
@@ -1177,7 +1177,7 @@ ticket.markModified("jeux");
 
     res.json({
       ok: true,
-      message: "Tickets vérifiés",
+      message: "Tickets vÃ©rifiÃ©s",
       checked
     });
 
@@ -1358,7 +1358,7 @@ app.post("/api/tickets", async (req, res) => {
     }
 
     if (!jeux.length) {
-      return res.status(400).json({ ok: false, message: "Pa gen jwèt" });
+      return res.status(400).json({ ok: false, message: "Pa gen jwÃ¨t" });
     }
 
   const safeJeux = jeux.map(j => ({
@@ -1369,7 +1369,7 @@ app.post("/api/tickets", async (req, res) => {
 })).filter(j => j.type && j.numero && j.loterie && j.montant > 0);
 
     if (!safeJeux.length) {
-      return res.status(400).json({ ok: false, message: "Jwèt yo pa valid" });
+      return res.status(400).json({ ok: false, message: "JwÃ¨t yo pa valid" });
     }
 
 for (const j of safeJeux) {
@@ -1391,10 +1391,10 @@ for (const j of safeJeux) {
     return res.status(403).json({
       ok:false,
       message:
-  "❌ " + loterie + "\n" +
+  "âŒ " + loterie + "\n" +
   type + " " + numero + "\n\n" +
   "Nimewo sa bloke.\n" +
-  "Ou pa ka vann jwèt sa."
+  "Ou pa ka vann jwÃ¨t sa."
     });
   }
 
@@ -1442,11 +1442,11 @@ if (special) {
       return res.status(403).json({
         ok:false,
         message:
-  "❌ " + loterie + "\n" +
+  "âŒ " + loterie + "\n" +
   type + " " + numero + "\n\n" +
   "Limit: " + limit.toFixed(2) + "\n" +
   "Deja vann: " + dejaVendu.toFixed(2) + "\n" +
-  "Rès disponib: 0.00\n\n" +
+  "RÃ¨s disponib: 0.00\n\n" +
   "Limit nimewo sa fini."
       });
     }
@@ -1455,13 +1455,13 @@ if (special) {
       return res.status(403).json({
         ok:false,
         message:
-  "❌ " + loterie + "\n" +
+  "âŒ " + loterie + "\n" +
   type + " " + numero + "\n\n" +
   "Limit: " + limit.toFixed(2) + "\n" +
   "Deja vann: " + dejaVendu.toFixed(2) + "\n" +
-  "Rès disponib: " + reste.toFixed(2) + "\n\n" +
+  "RÃ¨s disponib: " + reste.toFixed(2) + "\n\n" +
   "Ou te mande: " + montant.toFixed(2) + "\n" +
-  "Ou ka vann sèlman: " + reste.toFixed(2)
+  "Ou ka vann sÃ¨lman: " + reste.toFixed(2)
       });
     }
   }
@@ -1470,7 +1470,7 @@ if (special) {
     const vendor = await Vendor.findOne({ id: sellerId }).lean();
 
 if (!vendor) {
-  return res.status(404).json({ ok:false, message:"Vandè pa jwenn" });
+  return res.status(404).json({ ok:false, message:"VandÃ¨ pa jwenn" });
 }
 
 const credit = Number(vendor?.config?.credito || vendor?.credito || 0);
@@ -1490,7 +1490,7 @@ const grupo = await Grupo.findOne({
 if (grupo && grupo.estatus === "Bloqueado") {
   return res.status(403).json({
     ok:false,
-    message:"Grupo sa bloke. Ou pa ka fè tikè."
+    message:"Grupo sa bloke. Ou pa ka fÃ¨ tikÃ¨."
   });
 }
 
@@ -1525,7 +1525,7 @@ for (const j of safeJeux) {
 
     return res.status(403).json({
       ok:false,
-      message:"Limit vandè a se " + vendorLimit.toFixed(2)
+      message:"Limit vandÃ¨ a se " + vendorLimit.toFixed(2)
     });
 
   }
@@ -1577,7 +1577,7 @@ for(const j of safeJeux){
   if(!isLoteriaOpenServer(lot)){
     return res.status(403).json({
       ok:false,
-      message:"Lotri sa fèmen: " + lotKey
+      message:"Lotri sa fÃ¨men: " + lotKey
     });
   }
 }
@@ -1630,7 +1630,7 @@ const finalJeux = jeux
         second: "2-digit"
       }),
 
-      // ✅ Tikè toujou ANATAN lè li fèt
+      // âœ… TikÃ¨ toujou ANATAN lÃ¨ li fÃ¨t
       status: "ANATAN",
       premio: 0,
 
@@ -1642,7 +1642,7 @@ const finalJeux = jeux
 
     const obj = ticket.toObject();
 
-    console.log("✅ Ticket créé:", ticketId, "ANATAN");
+    console.log("âœ… Ticket crÃ©Ã©:", ticketId, "ANATAN");
 
     return res.json({
       ok: true,
@@ -1655,7 +1655,7 @@ const finalJeux = jeux
     });
 
   } catch (err) {
-    console.error("❌ SAVE TICKET ERROR:", err);
+    console.error("âŒ SAVE TICKET ERROR:", err);
 
     return res.status(500).json({
       ok: false,
@@ -1728,7 +1728,7 @@ app.post("/api/ticket-status", async (req, res) => {
       if (diffMinutes > 10) {
         return res.json({
           ok: false,
-          message: "Ou pa ka anile ticket sa ankò. 10 minit yo pase."
+          message: "Ou pa ka anile ticket sa ankÃ². 10 minit yo pase."
         });
       }
 
@@ -2412,13 +2412,13 @@ border-right:1px solid #ddd;
 
 <div class="topbar">
 <div class="top-left">
-<span class="icon-btn" onclick="toggleDrawer()">☰</span>
+<span class="icon-btn" onclick="toggleDrawer()">â˜°</span>
 </div>
 <div class="top-title">${sellerName}</div>
 <div class="top-right">
-<span class="icon-btn" onclick="submitPrint()">🖨️</span>
-<span class="icon-btn" onclick="shareWhatsApp()">🟢</span>
-<span class="icon-btn" onclick="openOptions()">⋮</span>
+<span class="icon-btn" onclick="submitPrint()">ðŸ–¨ï¸</span>
+<span class="icon-btn" onclick="shareWhatsApp()">ðŸŸ¢</span>
+<span class="icon-btn" onclick="openOptions()">â‹®</span>
 </div>
 </div>
 
@@ -2465,7 +2465,7 @@ border-right:1px solid #ddd;
 <div class="key" onclick="press('9')" ontouchstart="press('9'); return false;">9</div>
 
 <div class="key" onclick="press('.')" ontouchstart="press('.'); return false;">.</div>
-<div class="key" onclick="backspaceKey()" ontouchstart="backspaceKey(); return false;">⌫</div>
+<div class="key" onclick="backspaceKey()" ontouchstart="backspaceKey(); return false;">âŒ«</div>
 <div class="key" onclick="press('0')" ontouchstart="press('0'); return false;">0</div>
 <div class="key enter" onclick="handleEnter()" ontouchstart="handleEnter(); return false;">ENTER</div>
 </div>
@@ -2483,7 +2483,7 @@ border-right:1px solid #ddd;
     <button class="copy-btn" onclick="handleCopyButton()">Copie exacte</button>
 
     <div class="copy-note">
-      Mete nimewo seri ticket la. Si ticket la egziste, jwèt yo ap remonte nan ekran an.
+      Mete nimewo seri ticket la. Si ticket la egziste, jwÃ¨t yo ap remonte nan ekran an.
     </div>
   </div>
 </div>
@@ -2520,7 +2520,7 @@ border-right:1px solid #ddd;
 </div>
 <div class="drawer-item" onclick="openDrawerTirages()">Tirages</div>
 <div class="drawer-item" onclick="openDrawerBalance()">Balance</div>
-<div class="drawer-item" onclick="openDrawerParametre()">Paramètre</div>
+<div class="drawer-item" onclick="openDrawerParametre()">ParamÃ¨tre</div>
 <div class="drawer-item" onclick="openDrawerImprimante()">Imprimante</div>
 <div class="drawer-item" onclick="openDrawerUpdate()">Update</div>
 <div class="drawer-item" onclick="window.location='/logout?id=${encodeURIComponent(sellerId)}'">Sortir</div>
@@ -2536,9 +2536,9 @@ border-right:1px solid #ddd;
 <div class="loterie-box">
 <div id="loterieList" class="loterie-list"></div>
 <div class="modal-actions">
-<div class="circle-btn btn-clear" onclick="clearLoteries()">🚫</div>
-<div class="circle-btn btn-ok" onclick="validateLoteries()">✓</div>
-<div class="circle-btn btn-close" onclick="closeLoterieModal()">✕</div>
+<div class="circle-btn btn-clear" onclick="clearLoteries()">ðŸš«</div>
+<div class="circle-btn btn-ok" onclick="validateLoteries()">âœ“</div>
+<div class="circle-btn btn-close" onclick="closeLoterieModal()">âœ•</div>
 </div>
 </div>
 </div>
@@ -2910,7 +2910,7 @@ function renderLoterieList(){
   if(!visibleLoteries.length){
     list.innerHTML =
       '<div style="padding:30px;text-align:center;font-size:20px;font-weight:800;color:#888;">' +
-        'Pa gen lotri ouvè pou kounya' +
+        'Pa gen lotri ouvÃ¨ pou kounya' +
       '</div>';
     return;
   }
@@ -2927,7 +2927,7 @@ function renderLoterieList(){
 
     var left = document.createElement("div");
     left.className = "loterie-check";
-    left.textContent = selectedLoteries.indexOf(item.name) >= 0 ? "✓" : "";
+    left.textContent = selectedLoteries.indexOf(item.name) >= 0 ? "âœ“" : "";
 
     var center = document.createElement("div");
     center.innerHTML =
@@ -3077,7 +3077,7 @@ function autoMarriage(){
  var nums = Object.keys(counts);
 
  if(nums.length < 2){
-   alert("Fòk ou mete omwen 2 boul");
+   alert("FÃ²k ou mete omwen 2 boul");
    return;
  }
 
@@ -3091,7 +3091,7 @@ function autoMarriage(){
    return;
  }
 
- // 🔥 1. Fè gwoup (12/21, 34/43, etc)
+ // ðŸ”¥ 1. FÃ¨ gwoup (12/21, 34/43, etc)
  var groups = [];
  var used = {};
 
@@ -3112,7 +3112,7 @@ function autoMarriage(){
 
  var results = [];
 
- // 🔥 2. Travèse gwoup yo nan lòd
+ // ðŸ”¥ 2. TravÃ¨se gwoup yo nan lÃ²d
  for(var i=0;i<groups.length;i++){
    for(var j=i+1;j<groups.length;j++){
 
@@ -3131,7 +3131,7 @@ function autoMarriage(){
    }
  }
 
- // 🔥 3. Mete nan jwèt
+ // ðŸ”¥ 3. Mete nan jwÃ¨t
  results.forEach(function(numeroAuto){
    selectedLoteries.forEach(function(lot){
      mergeOrPushGame({
@@ -3154,7 +3154,7 @@ function autoLoto4(){
  var nums = Object.keys(counts);
 
  if(nums.length < 2){
-   alert("Fòk ou mete omwen 2 boul pou L1 otomatik");
+   alert("FÃ²k ou mete omwen 2 boul pou L1 otomatik");
    return;
  }
 
@@ -3387,7 +3387,7 @@ function resetAfterSend(){
 
 function saveCurrentTicket(channel){
  if(jeux.length === 0){
-   alert("Pa gen jwèt pou voye.");
+   alert("Pa gen jwÃ¨t pou voye.");
    return Promise.resolve(null);
  }
 
@@ -3423,7 +3423,7 @@ function saveCurrentTicket(channel){
 
 function submitPrint(){
   if(jeux.length === 0){
-    alert("Pa gen jwèt pou enprime.");
+    alert("Pa gen jwÃ¨t pou enprime.");
     return;
   }
 
@@ -3725,7 +3725,7 @@ btns[4].onclick = function(e){
   e.stopPropagation();
   feedbackTouch();
 
-  if(confirm("Ou sèten ou vle anile ticket sa?")){
+  if(confirm("Ou sÃ¨ten ou vle anile ticket sa?")){
     updateTicketStatus(t.id, "ANILE");
   }
 };
@@ -3886,7 +3886,7 @@ function handleCopyButton(){
     }
 
     if(!Array.isArray(found.jeux)){
-      alert("Ticket sa pa gen jwèt ladanl");
+      alert("Ticket sa pa gen jwÃ¨t ladanl");
       return;
     }
 
@@ -4043,11 +4043,11 @@ if(!loterieHtml){
   '<div style="height:100%;display:flex;flex-direction:column;background:#f5f5f5;">' +
 
     '<div style="height:58px;min-height:58px;background:#2f49d1;color:#fff;display:flex;align-items:center;justify-content:space-between;padding:0 14px;">' +
-      '<button id="rapportBackBtn" type="button" style="background:none;border:none;color:#fff;font-size:24px;cursor:pointer;">←</button>' +
+      '<button id="rapportBackBtn" type="button" style="background:none;border:none;color:#fff;font-size:24px;cursor:pointer;">â†</button>' +
       '<div style="font-size:22px;font-weight:700;">Rapports</div>' +
       '<div style="display:flex;gap:18px;align-items:center;">' +
-        '<button id="rapportPrintBtn" type="button" style="background:none;border:none;color:#fff;font-size:20px;cursor:pointer;">🖨️</button>' +
-        '<button id="rapportRefreshBtn" type="button" style="background:none;border:none;color:#fff;font-size:22px;cursor:pointer;">↻</button>' +
+        '<button id="rapportPrintBtn" type="button" style="background:none;border:none;color:#fff;font-size:20px;cursor:pointer;">ðŸ–¨ï¸</button>' +
+        '<button id="rapportRefreshBtn" type="button" style="background:none;border:none;color:#fff;font-size:22px;cursor:pointer;">â†»</button>' +
       '</div>' +
     '</div>' +
 
@@ -4063,12 +4063,12 @@ if(!loterieHtml){
     '<div style="text-align:center;font-weight:700;">Ventes</div><div style="text-align:center;font-weight:700;">' + Number(vente || 0).toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2}) + '</div>' +
     '<div style="text-align:center;font-weight:700;">Prix</div><div style="text-align:center;font-weight:700;">' + Number(prime || 0).toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2}) + '</div>' +
     '<div style="text-align:center;font-weight:700;">Commission</div><div style="text-align:center;font-weight:700;">' + Number(commission || 0).toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2}) + '</div>' +
-    '<div style="text-align:center;font-weight:700;">Résultat</div><div style="text-align:center;font-weight:700;">' + Number(resultat || 0).toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2}) + '</div>' +
+    '<div style="text-align:center;font-weight:700;">RÃ©sultat</div><div style="text-align:center;font-weight:700;">' + Number(resultat || 0).toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2}) + '</div>' +
   '</div>' +
 '</div>' +
 
       '<div style="background:#fff;padding:18px 16px;margin-bottom:18px;text-align:center;">' +
-        '<div style="font-size:22px;font-weight:700;margin-bottom:18px;">RESUMEN POR DÍA</div>' +
+        '<div style="font-size:22px;font-weight:700;margin-bottom:18px;">RESUMEN POR DÃA</div>' +
         '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;text-align:center;font-size:18px;margin-bottom:14px;">' +
           '<div>VENTE</div>' +
           '<div>PRIME</div>' +
@@ -4078,7 +4078,7 @@ if(!loterieHtml){
       '</div>' +
 
       '<div style="background:#fff;padding:18px 16px;text-align:center;">' +
-        '<div style="font-size:22px;font-weight:700;margin-bottom:18px;">RESUMEN POR LOTERÍA</div>' +
+        '<div style="font-size:22px;font-weight:700;margin-bottom:18px;">RESUMEN POR LOTERÃA</div>' +
         '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;text-align:center;font-size:18px;margin-bottom:14px;">' +
           '<div>VENTE</div>' +
           '<div>PRIME</div>' +
@@ -4163,7 +4163,7 @@ function updateTicketStatus(id, status, premio){
      }
    });
  }).catch(function(){
- alert("Erreur mise à jour status");
+ alert("Erreur mise Ã  jour status");
  });
 }
 
@@ -4231,7 +4231,7 @@ function copyTicketById(){
     var boulPe = document.createElement("div");
     boulPe.id = "boulPeOption";
     boulPe.className = "sheet-item";
-    boulPe.textContent = "Boul pè";
+    boulPe.textContent = "Boul pÃ¨";
     boulPe.onclick = function(){
       autoBoulPeMode = true;
       closeOptions();
@@ -4336,19 +4336,19 @@ var APP_LANG = localStorage.getItem("APP_LANG") || "fr";
 var TR = {
   fr: {
     billets:"Billets", copier:"Copier", payer:"Payer", rapports:"Rapports", menu:"Menu",
-    tirages:"Tirages", balance:"Balance", parametre:"Paramètre", imprimante:"Imprimante",
+    tirages:"Tirages", balance:"Balance", parametre:"ParamÃ¨tre", imprimante:"Imprimante",
     update:"Update", sortir:"Sortir",
     choisirLangue:"CHOISIR LA LANGUE",
     idioma:"Idioma del Equipo",
     heure:"Hora del Sistema",
-    version:"Versión de App",
+    version:"VersiÃ³n de App",
     papier:"Papel",
     charset:"CharSet",
     ventes:"VENTES",
     whatsapp:"WhatsApp",
     guardarUsuario:"Guardar Usuario",
     guardarClave:"Guardar Clave",
-    entrerAuto:"Entrar Automático",
+    entrerAuto:"Entrar AutomÃ¡tico",
     empreinte:"Usar Huella Digital",
     numero:"Numero",
     loterie:"Loterie",
@@ -4358,46 +4358,46 @@ var TR = {
   },
 
   ht: {
-    billets:"Biyè", copier:"Kopye", payer:"Peye", rapports:"Rapò", menu:"Meni",
-    tirages:"Tiraj", balance:"Balans", parametre:"Paramèt", imprimante:"Enprimant",
-    update:"Mizajou", sortir:"Sòti",
+    billets:"BiyÃ¨", copier:"Kopye", payer:"Peye", rapports:"RapÃ²", menu:"Meni",
+    tirages:"Tiraj", balance:"Balans", parametre:"ParamÃ¨t", imprimante:"Enprimant",
+    update:"Mizajou", sortir:"SÃ²ti",
     choisirLangue:"CHWAZI LANG",
-    idioma:"Lang aparèy la",
-    heure:"Lè sistèm nan",
-    version:"Vèsyon app la",
+    idioma:"Lang aparÃ¨y la",
+    heure:"LÃ¨ sistÃ¨m nan",
+    version:"VÃ¨syon app la",
     papier:"Papye",
     charset:"CharSet",
     ventes:"VANT",
     whatsapp:"WhatsApp",
-    guardarUsuario:"Sove itilizatè",
+    guardarUsuario:"Sove itilizatÃ¨",
     guardarClave:"Sove modpas",
     entrerAuto:"Antre otomatik",
-    empreinte:"Sèvi ak anprent",
+    empreinte:"SÃ¨vi ak anprent",
     numero:"Nimewo",
     loterie:"Lotri",
     montant:"Montan",
-    pasJeux:"Pa gen jwèt",
+    pasJeux:"Pa gen jwÃ¨t",
     ok:"OK"
   },
 
   es: {
-    billets:"Boletos", copier:"Copiar", payer:"Pagar", rapports:"Reportes", menu:"Menú",
-    tirages:"Sorteos", balance:"Balance", parametre:"Parámetros", imprimante:"Impresora",
+    billets:"Boletos", copier:"Copiar", payer:"Pagar", rapports:"Reportes", menu:"MenÃº",
+    tirages:"Sorteos", balance:"Balance", parametre:"ParÃ¡metros", imprimante:"Impresora",
     update:"Actualizar", sortir:"Salir",
     choisirLangue:"ELEGIR IDIOMA",
     idioma:"Idioma del Equipo",
     heure:"Hora del Sistema",
-    version:"Versión de App",
+    version:"VersiÃ³n de App",
     papier:"Papel",
     charset:"CharSet",
     ventes:"VENTAS",
     whatsapp:"WhatsApp",
     guardarUsuario:"Guardar Usuario",
     guardarClave:"Guardar Clave",
-    entrerAuto:"Entrar Automático",
+    entrerAuto:"Entrar AutomÃ¡tico",
     empreinte:"Usar Huella Digital",
-    numero:"Número",
-    loterie:"Lotería",
+    numero:"NÃºmero",
+    loterie:"LoterÃ­a",
     montant:"Monto",
     pasJeux:"Sin jugadas",
     ok:"OK"
@@ -4412,9 +4412,9 @@ function langSelectHtml(){
   return '' +
     '<div style="display:flex;align-items:center;gap:8px;justify-content:flex-end;">' +
       '<select id="langSelectTemp" style="font-size:18px;font-weight:800;padding:5px;">' +
-        '<option value="fr" ' + (APP_LANG === "fr" ? "selected" : "") + '>français</option>' +
-        '<option value="ht" ' + (APP_LANG === "ht" ? "selected" : "") + '>kreyòl</option>' +
-        '<option value="es" ' + (APP_LANG === "es" ? "selected" : "") + '>español</option>' +
+        '<option value="fr" ' + (APP_LANG === "fr" ? "selected" : "") + '>franÃ§ais</option>' +
+        '<option value="ht" ' + (APP_LANG === "ht" ? "selected" : "") + '>kreyÃ²l</option>' +
+        '<option value="es" ' + (APP_LANG === "es" ? "selected" : "") + '>espaÃ±ol</option>' +
       '</select>' +
       '<button onclick="saveLanguageChoice()" style="background:#2f49d1;color:white;border:none;border-radius:8px;padding:6px 12px;font-weight:800;">' + T("ok") + '</button>' +
     '</div>';
@@ -4629,7 +4629,7 @@ function openDrawerTirages(){
 function openDrawerBalance(){
   closeMenuOnly();
 
-  renderBalancePage(); // pa fetch la ankò isit
+  renderBalancePage(); // pa fetch la ankÃ² isit
 
   switchPage("balancePage", null);
 }
@@ -4732,43 +4732,43 @@ function renderParametrePage(){
       '<div style="color:#888;font-size:16px;margin-bottom:12px;">CHOISIR LA LANGUE</div>' +
       '<div style="background:#fff;border-radius:14px;padding:12px;margin-bottom:18px;font-size:18px;">' +
         '<div style="display:grid;grid-template-columns:1fr auto;align-items:center;padding:12px 0;border-bottom:1px solid #eee;">' +
-          '<div>🌐 Idioma del Equipo</div>' +
+          '<div>ðŸŒ Idioma del Equipo</div>' +
           '<select style="font-size:18px;border:none;background:transparent;font-weight:800;outline:none;">' +
-            '<option>français</option>' +
-            '<option>kreyòl</option>' +
-            '<option>español</option>' +
+            '<option>franÃ§ais</option>' +
+            '<option>kreyÃ²l</option>' +
+            '<option>espaÃ±ol</option>' +
           '</select>' +
         '</div>' +
         '<div style="display:grid;grid-template-columns:1fr auto;align-items:center;padding:12px 0;border-bottom:1px solid #eee;">' +
-          '<div>🕒 Hora del Sistema</div><b>' + new Date().toLocaleTimeString("fr-FR") + '</b>' +
+          '<div>ðŸ•’ Hora del Sistema</div><b>' + new Date().toLocaleTimeString("fr-FR") + '</b>' +
         '</div>' +
         '<div style="display:grid;grid-template-columns:1fr auto;align-items:center;padding:12px 0;">' +
-          '<div>✅ Versión de App</div><b>2.9.32</b>' +
+          '<div>âœ… VersiÃ³n de App</div><b>2.9.32</b>' +
         '</div>' +
       '</div>' +
 '<div style="display:flex;justify-content:space-between;padding:14px;border-bottom:1px solid #eee;">' +
-  '<span>🌐 ' + T("idioma") + '</span>' +
+  '<span>ðŸŒ ' + T("idioma") + '</span>' +
   langSelectHtml() +
 '</div>' +
       '<div style="color:#888;font-size:16px;margin-bottom:12px;">IMPRIMANTE</div>' +
       '<div style="background:#fff;border-radius:14px;padding:12px;margin-bottom:18px;font-size:18px;">' +
-        '<div style="padding:12px 0;border-bottom:1px solid #eee;">🖨️ -- <b style="float:right;">✎</b></div>' +
-        '<div style="padding:12px 0;border-bottom:1px solid #eee;">🧾 Papel <b style="float:right;">58mm ○ 80mm</b></div>' +
+        '<div style="padding:12px 0;border-bottom:1px solid #eee;">ðŸ–¨ï¸ -- <b style="float:right;">âœŽ</b></div>' +
+        '<div style="padding:12px 0;border-bottom:1px solid #eee;">ðŸ§¾ Papel <b style="float:right;">58mm â—‹ 80mm</b></div>' +
         '<div style="padding:12px 0;">Tt CharSet <b style="float:right;">UTF-8</b></div>' +
       '</div>' +
 
       '<div style="color:#888;font-size:16px;margin-bottom:12px;">VENTES</div>' +
       '<div style="background:#fff;border-radius:14px;padding:12px;margin-bottom:18px;font-size:18px;">' +
         '<div style="padding:12px 0;border-bottom:1px solid #eee;">Loteries <b style="float:right;">Material</b></div>' +
-        '<div style="padding:12px 0;">WhatsApp <b style="float:right;">IMG ○ PDF ○ ?</b></div>' +
+        '<div style="padding:12px 0;">WhatsApp <b style="float:right;">IMG â—‹ PDF â—‹ ?</b></div>' +
       '</div>' +
 
       '<div style="color:#888;font-size:16px;margin-bottom:12px;">CLAVIER</div>' +
       '<div style="background:#fff;border-radius:14px;padding:12px;font-size:18px;">' +
-        '<div style="padding:12px 0;border-bottom:1px solid #eee;">🔒 Guardar Usuario <b style="float:right;">ON</b></div>' +
-        '<div style="padding:12px 0;border-bottom:1px solid #eee;">🔑 Guardar Clave <b style="float:right;">OFF</b></div>' +
-        '<div style="padding:12px 0;border-bottom:1px solid #eee;">↪ Entrar Automático <b style="float:right;">OFF</b></div>' +
-        '<div style="padding:12px 0;">🖐 Usar Huella Digital <b style="float:right;">ON</b></div>' +
+        '<div style="padding:12px 0;border-bottom:1px solid #eee;">ðŸ”’ Guardar Usuario <b style="float:right;">ON</b></div>' +
+        '<div style="padding:12px 0;border-bottom:1px solid #eee;">ðŸ”‘ Guardar Clave <b style="float:right;">OFF</b></div>' +
+        '<div style="padding:12px 0;border-bottom:1px solid #eee;">â†ª Entrar AutomÃ¡tico <b style="float:right;">OFF</b></div>' +
+        '<div style="padding:12px 0;">ðŸ– Usar Huella Digital <b style="float:right;">ON</b></div>' +
       '</div>' +
     '</div>';
 }
@@ -4790,7 +4790,7 @@ function renderImprimantePage(){
     '</div>';
 }
 
-/* ===== AJOUTE KALANDRIYE SOU LIS BIYÈ YO SAN CHANJE renderBillets() ===== */
+/* ===== AJOUTE KALANDRIYE SOU LIS BIYÃˆ YO SAN CHANJE renderBillets() ===== */
 (function(){
   var oldRenderBilletsDate = renderBillets;
   var billetsDateFilter = "";
@@ -4946,7 +4946,7 @@ function renderImprimantePage(){
     };
 
     items.forEach(function(item){
-      if(item.textContent.trim() === "Boul pè"){
+      if(item.textContent.trim() === "Boul pÃ¨"){
         item.parentNode.insertBefore(grap, item.nextSibling);
       }
     });
@@ -5018,7 +5018,7 @@ function renderImprimantePage(){
       val = String(val).trim();
 
       if(!/^\\d{2}$/.test(val)){
-        alert("Fòk se 2 chif egzak");
+        alert("FÃ²k se 2 chif egzak");
         return;
       }
 
@@ -5056,7 +5056,7 @@ function renderImprimantePage(){
         return;
       }
 
-      // 🔥 0 jiska 9 devan 2 boul la
+      // ðŸ”¥ 0 jiska 9 devan 2 boul la
       for(var i=0;i<=9;i++){
         var numeroAuto = i + grapBase;
 
@@ -5173,7 +5173,7 @@ function renderBalancePage(){
     var collectionsBlock =
       '<details style="background:#fff;border:1px solid #ddd;margin-bottom:10px;">' +
         '<summary style="display:grid;grid-template-columns:1fr auto;align-items:center;padding:13px 16px;font-size:20px;cursor:pointer;">' +
-          '<span>Collections livrées</span>' +
+          '<span>Collections livrÃ©es</span>' +
           '<span>' + moneyFmt(collectionsLivrees) + '</span>' +
         '</summary>' +
         details +
@@ -5191,12 +5191,12 @@ function renderBalancePage(){
           row("Ventes", vente, false, false) +
           row("Prix", prix, false, false) +
           row("Commission", commission, false, false) +
-          row("RÉSULTAT", resultat, true, false) +
+          row("RÃ‰SULTAT", resultat, true, false) +
         '</div>' +
 
         '<div style="background:#fff;border:1px solid #ddd;margin-bottom:10px;">' +
           row("Initial", initial, false, false) +
-          row("Paiement reçu", paiementRecu, false, false) +
+          row("Paiement reÃ§u", paiementRecu, false, false) +
           row("SOUS-TOTAL", sousTotal, true, false) +
         '</div>' +
 
@@ -5207,7 +5207,7 @@ function renderBalancePage(){
         '</div>' +
 
         '<div style="background:#eef1f5;border:1px solid #ddd;">' +
-          row("CRÉDIT", credit, true, false) +
+          row("CRÃ‰DIT", credit, true, false) +
           row("DISPONIBLE", disponible, true, true) +
         '</div>' +
       '</div>';
@@ -5260,7 +5260,7 @@ function getLoteriaState(l){
   }
 
   if(!isOpen){
-    return { open:false, minutesLeft:0, label:"Fèmen", color:"#999" };
+    return { open:false, minutesLeft:0, label:"FÃ¨men", color:"#999" };
   }
 
   var h = Math.floor(minutesLeft / 60);
