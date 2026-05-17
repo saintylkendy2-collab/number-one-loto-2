@@ -37,7 +37,9 @@ app.use(
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 
-mongoose.connect(process.env.MONGO_URI)
+mongoose.connect(
+  process.env.MONGO_URI || "mongodb://127.0.0.1:27017/number_one_loto_2"
+)
 .then(async () => {
   console.log("Mongo connecté");
   await loadLimites();
