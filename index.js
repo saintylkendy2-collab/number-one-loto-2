@@ -1617,6 +1617,7 @@ const finalJeux = jeux
 
       vendeur: sellerId,
       vendeurNom: sellerName,
+      vendeurConfig: vendor.config || {},
 
       createdAt: now,
       createdAtLabel: clientDateLabel && clientTimeLabel
@@ -2560,6 +2561,7 @@ border-right:1px solid #ddd;
 <script>
 var sellerId = ${JSON.stringify(sellerId)};
 var sellerName = ${JSON.stringify(sellerName)};
+var sellerConfig = ${JSON.stringify(vendeur?.config || {})};
 
 var activeField = "numero";
 var numero = "";
@@ -3355,19 +3357,113 @@ function buildPayloadGames(){
 function buildPrintableTextFromTicket(ticket){
   if(!ticket || !Array.isArray(ticket.jeux)) return "";
 
+  function fit(v, n){
+    v = String(v || "");
+
+    while(v.length < n){
+      v += " ";
+    }
+
+    return v;
+  }
+
+  function formatType(typeRaw){
+    typeRaw = String(typeRaw || "").toUpperCase();
+
+    if(typeRaw === "BOR") return "Borlette";
+    if(typeRaw === "MAR") return "Mariage";
+
+    return typeRaw;
+  }
+
+  var sellerConfig =
+(
+  ticket &&
+  ticket.vendeurConfig
+)
+? ticket.vendeurConfig
+: {};
+
   var lines = [];
+  var groups = {};
+  var order = [];
+
+  lines.push("NUMBER ONE LOTO 2");
+  lines.push("SELLER " + String(ticket.vendeurNom || ticket.vendeur || ""));
+  lines.push("TICKET");
+  lines.push(String(ticket.id || ticket.ticketId || ticket.serial || ""));
+  lines.push(
+    "DATE " +
+    String(
+      ticket.createdAtLabel ||
+      ((ticket.dateLabel || "") + " " + (ticket.timeLabel || ""))
+    ).trim()
+  );
+
+  lines.push("");
 
   ticket.jeux.forEach(function(j){
-    lines.push(
-      String(j.type || "") + " " +
-      String(j.numero || "") + " " +
-      Number(j.montant || 0).toFixed(2) +
-      " - " +
-      String(j.loterie || "")
-    );
+
+    var lot = String(
+      j.loterie || j.loteria || "SANS TIRAGE"
+    ).trim();
+
+    if(!groups[lot]){
+      groups[lot] = [];
+      order.push(lot);
+    }
+
+    groups[lot].push({
+      type: formatType(j.type),
+      numero: String(j.numero || "").trim(),
+      montant: Number(j.montant || 0),
+      gratis: j.gratis === true || j.free === true
+    });
+
   });
 
-  return lines.join("\\n");
+  order.forEach(function(lot){
+
+    lines.push(lot);
+    lines.push("");
+
+    groups[lot].forEach(function(g){
+
+      lines.push(
+        fit(g.type, 10) +
+        fit(g.numero, 8) +
+        (g.gratis ? "Gratis" : g.montant.toFixed(2))
+      );
+
+    });
+
+    lines.push("");
+
+  });
+
+  lines.push(
+    "TOTAL: " +
+    Number(ticket.total || 0).toFixed(2) +
+    " "
+  );
+
+ var footerMessage =
+(
+  sellerConfig &&
+  sellerConfig.usarMensajeTicket &&
+  sellerConfig.mensajeTicket
+)
+? sellerConfig.mensajeTicket
+: "";
+
+if(footerMessage){
+  lines.push("");
+  lines.push(String(footerMessage));
+}
+
+ var code = String.fromCharCode(96) + String.fromCharCode(96) + String.fromCharCode(96);
+return code + "\\n" + lines.join("\\n") + "\\n" + code;
+
 }
 
 
@@ -3446,25 +3542,30 @@ function submitPrint(){
 }
 
 function shareWhatsApp(){
-  var waWin = window.open("", "_blank");
-
   saveCurrentTicket("WHATSAPP").then(function(ticket){
-    if(!ticket){
-      if(waWin) waWin.close();
-      return;
-    }
+    if(!ticket) return;
+
+   ticket.vendeurConfig = {
+  usarMensajeTicket: true,
+  mensajeTicket:
+    (sellerConfig && sellerConfig.mensajeTicket)
+    ? sellerConfig.mensajeTicket
+    : ""
+};
+
+  console.log("WA sellerConfig:", sellerConfig);
+console.log("WA ticket vendeurConfig:", ticket.vendeurConfig);
 
     var text = buildPrintableTextFromTicket(ticket);
     var url = "https://wa.me/?text=" + encodeURIComponent(text);
 
-    if(waWin){
-      waWin.location.href = url;
-    }
+    window.location.href = url;
 
     loadBillets();
     resetAfterSend();
-  }).catch(function(){
-    if(waWin) waWin.close();
+
+  }).catch(function(err){
+    console.log(err);
     alert("Erreur WhatsApp");
   });
 }
@@ -5484,6 +5585,16 @@ const APP_CONFIG =
   await AppConfig.findOne({ key:"main" }).lean()
   || {};
 
+  const sellerConfig = (vendeur && vendeur.config) ? vendeur.config : {};
+
+const footerMessage =
+(
+  sellerConfig.usarMensajeTicket &&
+  sellerConfig.mensajeTicket
+)
+? sellerConfig.mensajeTicket
+: (APP_CONFIG.ticketMessage || "");
+
     res.send(`
 <!DOCTYPE html>
 <html>
@@ -5521,7 +5632,7 @@ ${APP_CONFIG.ticketLogo ? `
 </div>
 ` : ""}
 
-<div class="title">NUMBER ONE LOTO 2</div>
+<div class="title">NUMBER ONE LOTO</div>
 
 <div class="meta">
 SELLER ${sellerName}<br>
@@ -5541,7 +5652,7 @@ ${freeHtml}
 
 <div class="line"></div>
 
-<div class="total">TOTAL: ${total.toFixed(2)}</div>
+<div class="total">TOTAL: ${total.toFixed(2)} G</div>
 
 <div
   style="
@@ -5550,7 +5661,15 @@ ${freeHtml}
     font-size:8px;
   "
 >
-  ${APP_CONFIG.ticketMessage || ""}
+  ${
+(
+sellerConfig &&
+sellerConfig.usarMensajeTicket &&
+sellerConfig.mensajeTicket
+)
+? sellerConfig.mensajeTicket
+: (footerMessage || "")
+}
 </div>
 
 <script>
