@@ -1482,6 +1482,25 @@ if (credit <= 0) {
   });
 }
 
+const totalTicket = safeJeux.reduce(
+  (s, j) => s + Number(j.montant || 0),
+  0
+);
+
+const balance = Number(vendor.balance || 0);
+
+if (
+  credit > 0 &&
+  (
+    totalTicket > credit ||
+    (balance + totalTicket) > credit
+  )
+) {
+  return res.status(403).json({
+    ok:false,
+    message:"OU PA GEN KREDI"
+  });
+}
 
 const grupo = await Grupo.findOne({
   nombre: vendor.zona || vendor.groupe
@@ -3524,10 +3543,14 @@ function submitPrint(){
   }
 
   saveCurrentTicket("PRINT").then(function(ticket){
-    if(!ticket || !ticket.id){
-      alert("Ticket pa kreye oubyen ID pa vini.");
-      return;
-    }
+     if(!ticket || !ticket.id){
+
+  if(ticket && ticket.message){
+    alert(ticket.message);
+  }
+
+  return;
+}
 
     window.location.href =
       "/print?ticketId=" + encodeURIComponent(ticket.id) +
