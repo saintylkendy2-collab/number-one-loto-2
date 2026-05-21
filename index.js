@@ -3503,21 +3503,41 @@ function submitPrint(){
   }
 
   saveCurrentTicket("PRINT").then(function(ticket){
-     if(!ticket || !ticket.id){
+    if(!ticket || !ticket.id){
 
-  if(ticket && ticket.message){
-    alert(ticket.message);
-  }
+      if(ticket && ticket.message){
+        alert(ticket.message);
+      }
 
-  return;
-}
+      return;
+    }
 
-    window.location.href =
+    var printUrl =
       "/print?ticketId=" + encodeURIComponent(ticket.id) +
       "&sellerId=" + encodeURIComponent(sellerId);
 
-    loadBillets();
-    resetAfterSend();
+    fetch(printUrl)
+      .then(function(r){
+        return r.text();
+      })
+      .then(function(html){
+        var doc = new DOMParser().parseFromString(html, "text/html");
+        var text = doc.body.innerText.trim();
+
+        if(window.AndroidPrinter && typeof AndroidPrinter.printTicket === "function"){
+          AndroidPrinter.printTicket(text);
+        }else{
+          alert("Printer Android pa disponible");
+        }
+
+        loadBillets();
+        resetAfterSend();
+      })
+      .catch(function(err){
+        console.error(err);
+        alert("Erreur impression");
+      });
+
   }).catch(function(err){
     console.error(err);
     alert("Erreur impression");
@@ -3662,11 +3682,28 @@ function rePrintTicket(ticketId){
     return;
   }
 
-  window.open(
+  var printUrl =
     "/print?ticketId=" + encodeURIComponent(ticketId) +
-    "&sellerId=" + encodeURIComponent(sellerId),
-    "_blank"
-  );
+    "&sellerId=" + encodeURIComponent(sellerId);
+
+  fetch(printUrl)
+    .then(function(r){
+      return r.text();
+    })
+    .then(function(html){
+      var doc = new DOMParser().parseFromString(html, "text/html");
+      var text = doc.body.innerText.trim();
+
+      if(window.AndroidPrinter && typeof AndroidPrinter.printTicket === "function"){
+        AndroidPrinter.printTicket(text);
+      }else{
+        alert("Printer Android pa disponible");
+      }
+    })
+    .catch(function(err){
+      console.error(err);
+      alert("Erreur impression");
+    });
 }
 
 
@@ -4188,64 +4225,49 @@ if(!loterieHtml){
     });
   }
 
-  if(printBtn){
-  printBtn.addEventListener("click", function(){
+if(printBtn){
+  printBtn.onclick = function(){
+
     var now = new Date();
 
-    window.open(
+    var printDate =
+      String(now.getDate()).padStart(2, "0") + "/" +
+      String(now.getMonth() + 1).padStart(2, "0") + "/" +
+      now.getFullYear();
+
+    var printTime =
+      String(now.getHours()).padStart(2, "0") + ":" +
+      String(now.getMinutes()).padStart(2, "0");
+
+    var url =
       "/print-report?sellerId=" + encodeURIComponent(sellerId) +
       "&start=" + encodeURIComponent(startValue) +
       "&end=" + encodeURIComponent(endValue) +
-      "&date=" + encodeURIComponent(now.toLocaleDateString("fr-FR")) +
-      "&time=" + encodeURIComponent(now.toLocaleTimeString("fr-FR", {
-        hour: "2-digit",
-        minute: "2-digit"
-      })),
-      "_blank"
-    );
-  });
+      "&date=" + encodeURIComponent(printDate) +
+      "&time=" + encodeURIComponent(printTime);
+
+    fetch(url)
+      .then(function(r){
+        return r.text();
+      })
+      .then(function(html){
+        var doc = new DOMParser().parseFromString(html, "text/html");
+        var text = doc.body.innerText.trim();
+
+        if(window.AndroidPrinter && typeof AndroidPrinter.printTicket === "function"){
+          AndroidPrinter.printTicket(text);
+        }else{
+          alert("Printer Android pa disponible");
+        }
+      })
+      .catch(function(err){
+        console.error(err);
+        alert("Erreur impression rapport");
+      });
+
+  };
 }
 
-  if(startInput){
-    startInput.addEventListener("change", function(){
-      renderRapports();
-    });
-  }
-
-  if(endInput){
-    endInput.addEventListener("change", function(){
-      renderRapports();
-    });
-  }
-}
-
-function updateTicketStatus(id, status, premio){
- fetch("/api/ticket-status", {
- method: "POST",
- headers: { "Content-Type": "application/json" },
- body: JSON.stringify({
-   id: id,
-   status: status,
-   premio: premio || 0
- })
- }).then(function(res){
- return res.json();
- }).then(function(){
-   fetch("/api/vendor/" + encodeURIComponent(sellerId) + "/tickets")
-   .then(function(res){ return res.json(); })
-   .then(function(rows){
-     savedTickets = Array.isArray(rows) ? rows : [];
-     renderBillets();
-     renderRapports();
-
-     if(currentPageName === "balancePage"){
-       renderBalancePage();
-     }
-   });
- }).catch(function(){
- alert("Erreur mise à jour status");
- });
-}
 
 function copyTicketById(){
  var id = document.getElementById("copyTicketId").value.trim();
@@ -4854,6 +4876,7 @@ function renderParametrePage(){
 }
 
 function renderImprimantePage(){
+
   var box = document.getElementById("imprimanteWrap");
   if(!box) return;
 
@@ -4862,12 +4885,181 @@ function renderImprimantePage(){
     '<div style="padding:14px;">' +
       '<div style="background:#fff;border-radius:14px;padding:14px;font-size:18px;">' +
         '<div style="font-size:20px;font-weight:800;margin-bottom:12px;">Printer disponibles</div>' +
-        '<div style="padding:14px;border-bottom:1px solid #eee;">POS Internal Printer</div>' +
-        '<div style="padding:14px;border-bottom:1px solid #eee;">Bluetooth Printer</div>' +
-        '<div style="padding:14px;border-bottom:1px solid #eee;">LP-BT71</div>' +
-        '<button onclick="submitPrint()" style="width:100%;height:50px;border:none;border-radius:12px;background:#3452aa;color:#fff;font-size:18px;font-weight:800;margin-top:16px;">Tester impression</button>' +
+        '<div id="printerList" style="min-height:120px;color:#555;font-size:17px;">Peze bouton rechèch la...</div>' +
+        '<button onclick="checkPrinter()" style="width:100%;height:50px;border:none;border-radius:12px;background:#3452aa;color:#fff;font-size:18px;font-weight:800;margin-top:16px;">Chèche imprimante</button>' +
+        '<button onclick="testPrinter()" style="width:100%;height:50px;border:none;border-radius:12px;background:#111;color:#fff;font-size:18px;font-weight:800;margin-top:10px;">Tester impression</button>' +
       '</div>' +
     '</div>';
+}
+
+function searchPrinters(){
+
+  var list = document.getElementById("printerList");
+  if(!list) return;
+
+  list.innerHTML = "Recherche...";
+
+  if(typeof AndroidPrinter === "undefined"){
+    list.innerHTML = "AndroidPrinter pa konekte nan APK la.";
+    return;
+  }
+
+  var data = "[]";
+
+  if(AndroidPrinter.getPairedPrinters){
+    data = AndroidPrinter.getPairedPrinters();
+  }else if(AndroidPrinter.getPrinters){
+    data = AndroidPrinter.getPrinters();
+  }else{
+    list.innerHTML = "Fonksyon rechèch printer la pa nan APK la.";
+    return;
+  }
+
+  var printers = [];
+
+  try{
+    printers = JSON.parse(data || "[]");
+  }catch(e){
+    printers = [];
+  }
+
+  if(!printers.length){
+    list.innerHTML = "Pa gen imprimante jwenn.";
+    return;
+  }
+
+  list.innerHTML = "";
+
+  printers.forEach(function(p){
+
+    var item = document.createElement("div");
+
+    item.style.padding = "14px";
+    item.style.borderBottom = "1px solid #eee";
+    item.style.fontSize = "17px";
+
+    item.innerHTML =
+      '<b>' + (p.name || "Printer") + '</b><br>' +
+      '<span style="font-size:14px;color:#777;">' + (p.address || "") + '</span>';
+
+    item.onclick = function(){
+      connectPrinter(p.address, p.name);
+    };
+
+    list.appendChild(item);
+  });
+}
+
+function checkPrinter(){
+
+  var list = document.getElementById("printerList");
+
+  if(!list){
+    return;
+  }
+
+  list.innerHTML = "Recherche imprimante...";
+
+  try{
+
+    var printers = [];
+
+    if(typeof AndroidPrinter !== "undefined" && AndroidPrinter.getPrinters){
+
+      var data = AndroidPrinter.getPrinters();
+
+      try{
+        printers = JSON.parse(data || "[]");
+      }catch(e){
+        printers = [];
+      }
+
+    }else{
+
+      list.innerHTML = "AndroidPrinter pa disponib.";
+      return;
+    }
+
+    if(!Array.isArray(printers)){
+      printers = [];
+    }
+
+    if(printers.length <= 0){
+      list.innerHTML = "Pa gen imprimante jwenn.";
+      return;
+    }
+
+    list.innerHTML = "";
+
+    printers.forEach(function(p){
+
+      var item = document.createElement("div");
+
+      item.style.padding = "14px";
+      item.style.borderBottom = "1px solid #eee";
+      item.style.fontSize = "17px";
+      item.style.cursor = "pointer";
+
+      item.innerHTML =
+  "<b>" + (p.name || "Printer") + "</b><br>" +
+  "<span style='font-size:14px;color:#777;'>" + (p.address || "") + "</span>";
+
+      item.onclick = function(){
+        connectPrinter(p.address, p.name);
+      };
+
+      list.appendChild(item);
+
+    });
+
+  }catch(err){
+
+    console.log(err);
+    list.innerHTML = "Erreur recherche imprimante.";
+
+  }
+}
+
+function connectPrinter(address,name){
+
+  localStorage.setItem(
+    "NBL_PRINTER_ADDRESS",
+    address
+  );
+
+  localStorage.setItem(
+    "NBL_PRINTER_NAME",
+    name
+  );
+
+  if(typeof AndroidPrinter !== "undefined" &&
+     AndroidPrinter.connectPrinter){
+
+    AndroidPrinter.connectPrinter(address);
+
+  }
+
+  alert("Imprimante connectée : " + name);
+
+}
+
+function testPrinter(){
+
+  var text = "";
+
+  text += "NUMBER ONE LOTO 2\\n";
+  text += "TEST IMPRESSION\\n";
+  text += "----------------------\\n";
+  text += "Printer OK\\n\\n\\n";
+
+  if(typeof AndroidPrinter !== "undefined" && AndroidPrinter.printTicket){
+
+    AndroidPrinter.printTicket(text);
+
+  }else{
+
+    alert("AndroidPrinter pa konekte.");
+  }
 }
 
 /* ===== AJOUTE KALANDRIYE SOU LIS BIYÈ YO SAN CHANJE renderBillets() ===== */
@@ -5410,262 +5602,202 @@ app.get("/print", async (req, res) => {
   try {
     const ticketId = String(req.query.ticketId || "").trim();
     const sellerId = String(req.query.sellerId || "").trim().toUpperCase();
+    const NL = String.fromCharCode(10);
 
-   const ticket = await Ticket.findOne({
-  $or: [
-    { id: ticketId },
-    { ticketId: ticketId },
-    { serial: ticketId }
-  ]
-}).lean();
+    const ticket = await Ticket.findOne({
+      $or: [
+        { id: ticketId },
+        { ticketId: ticketId },
+        { serial: ticketId }
+      ]
+    }).lean();
 
-if (!ticket) {
-  return res.status(404).send("Ticket introuvable");
-}
+    if (!ticket) {
+      return res.status(404).send("Ticket introuvable");
+    }
 
-   let vendeur = null;
+    let vendeur = null;
 
-if (sellerId) {
-  vendeur = await Vendor.findOne({ id: sellerId }).lean();
-}
+    if (sellerId) {
+      vendeur = await Vendor.findOne({ id: sellerId }).lean();
+    }
 
-const sellerName = String(
-  (vendeur && (vendeur.nom || vendeur.nombre)) ||
-  ticket.vendeurNom ||
-  ticket.vendeur ||
-  sellerId ||
-  "VENDEUR"
-);
+    const sellerName = String(
+      (vendeur && (vendeur.nom || vendeur.nombre)) ||
+      ticket.vendeurNom ||
+      ticket.vendeur ||
+      sellerId ||
+      "VENDEUR"
+    );
 
     const total = Number(ticket.total || 0);
     const dateStr = ticket.dateLabel || formatDateFR(new Date(ticket.createdAt || Date.now()));
     const timeStr = ticket.timeLabel || formatTimeFR(new Date(ticket.createdAt || Date.now()));
 
-    let lotSeen = {};
-    let loteriesHtml = "";
+    const APP_CONFIG =
+      await AppConfig.findOne({ key:"main" }).lean()
+      || {};
 
-    (ticket.jeux || []).forEach(j => {
-      const lot = String(j.loterie || "").trim() || "SANS TIRAGE";
+    const sellerConfig = (vendeur && vendeur.config) ? vendeur.config : {};
+
+    const footerMessage =
+      (
+        sellerConfig.usarMensajeTicket &&
+        sellerConfig.mensajeTicket
+      )
+      ? sellerConfig.mensajeTicket
+      : (APP_CONFIG.ticketMessage || "");
+
+    function clean(v){
+      return String(v || "")
+        .replace(/</g, "")
+        .replace(/>/g, "")
+        .replace(/&/g, "and");
+    }
+
+    function money(n){
+      return Number(n || 0).toFixed(2);
+    }
+
+    function lineGame(type, numero, montant){
+      var left = String(type || "").padEnd(11, " ");
+      var mid = String(numero || "").padStart(8, " ");
+      var right = String(montant || "").padStart(10, " ");
+      return left + mid + right;
+    }
+
+    let lotSeen = {};
+    let loteriesText = "";
+
+    (ticket.jeux || []).forEach(function(j){
+      const lot = String(j.loterie || j.loteria || "").trim().toUpperCase() || "SANS TIRAGE";
+
       if (!lotSeen[lot]) {
         lotSeen[lot] = true;
-        loteriesHtml += '<div class="tirage">' + lot + '</div>';
+        loteriesText += clean(lot) + NL;
       }
     });
 
     const gameMap = {};
-    let gamesHtml = "";
 
-    (ticket.jeux || []).forEach(j => {
-
-if (j.gratis === true || j.free === true) {
-  return;
-}
+    (ticket.jeux || []).forEach(function(j){
+      if (j.gratis === true || j.free === true) {
+        return;
+      }
 
       let typeRaw = String(j.type || "").toUpperCase();
       let numero = String(j.numero || "").trim();
       let montant = Number(j.montant || 0);
+      let loterie = String(j.loterie || j.loteria || "").trim().toUpperCase();
 
       let type = typeRaw;
       if (typeRaw === "BOR") type = "Borlette";
       else if (typeRaw === "MAR") type = "Mariage";
-      else if (typeRaw === "L41") type = "Loto4";
 
+      let key = loterie + "|" + type + "|" + numero + "|" + montant;
 
-      let loterie =
-  String(j.loterie || j.loteria || "").trim().toUpperCase();
-
-let key =
-  loterie + "|" + type + "|" + numero + "|" + montant;
-
-   if (!gameMap[key]) {
-
-  gameMap[key] = {
-    type,
-    numero,
-    montant,
-    count: 0,
-    gratis: j.gratis === true,
-    free: j.free === true
-  };
-
-}
+      if (!gameMap[key]) {
+        gameMap[key] = {
+          type: type,
+          numero: numero,
+          montant: montant,
+          count: 0,
+          gratis: j.gratis === true,
+          free: j.free === true
+        };
+      }
 
       gameMap[key].count++;
     });
 
-    Object.values(gameMap).forEach(g => {
-      let totalLine =
-  g.gratis || g.free
-    ? "Gratis"
-    : (g.montant * g.count).toFixed(2);
+    let gamesText = "";
 
-      gamesHtml +=
-        '<div class="game-row">' +
-          '<div class="col-type">' + (g.type === "L41" ? "Loto4" : g.type) + '</div>' +
-          '<div class="col-num">' + g.numero + '</div>' +
-          '<div class="col-amt">' + totalLine + '</div>' +
-        '</div>';
+    Object.values(gameMap).forEach(function(g){
+      let totalLine =
+        g.gratis || g.free
+          ? "Gratis"
+          : money(g.montant * g.count);
+
+      gamesText += lineGame(
+        g.type,
+        g.numero,
+        totalLine
+      ) + NL;
     });
 
-    const freeGames = (ticket.jeux || []).filter(
-  j => j.gratis === true || j.free === true
-);
+    const freeGames = (ticket.jeux || []).filter(function(j){
+      return j.gratis === true || j.free === true;
+    });
 
-let freeHtml = "";
+    let freeText = "";
 
-let freeMap = {};
+    freeGames.forEach(function(j){
+      let typeRaw = String(j.type || "").toUpperCase();
 
-freeGames.forEach(j => {
+      let type = typeRaw;
+      if (typeRaw === "BOR") type = "Borlette";
+      else if (typeRaw === "MAR") type = "Mariage";
 
-  let loterie = String(
-    j.loterie || j.loteria || ""
-  ).trim();
+      let numero = String(j.numero || "").trim();
 
-  if (!freeMap[loterie]) {
-    freeMap[loterie] = [];
-  }
+      freeText += lineGame(
+        type,
+        numero,
+        "Gratis"
+      ) + NL;
+    });
 
-  freeMap[loterie].push(j);
+    let text = "";
 
-});
+    text += "      NUMBER ONE LOTO" + NL;
+    text += "SELLER " + clean(sellerName) + NL;
+    text += "TICKET " + clean(ticket.id || ticket.ticketId || ticket.serial || ticketId) + NL;
+    text += "DATE " + clean(dateStr) + " " + clean(timeStr) + NL;
+    text += "------------------------------" + NL;
 
-Object.keys(freeMap).forEach(loterie => {
+    text += loteriesText;
+    text += "------------------------------" + NL;
 
-  freeHtml +=
-    '<div class="tirage">' + loterie + '</div>';
+    text += gamesText;
 
-  freeMap[loterie].forEach(j => {
+    if (freeText) {
+      text += freeText;
+    }
 
-    let typeRaw = String(j.type || "").toUpperCase();
+    text += "------------------------------" + NL;
+    text += "TOTAL: " + money(total) + " G" + NL;
 
-let type = typeRaw;
-
-if (typeRaw === "BOR") type = "Borlette";
-else if (typeRaw === "MAR") type = "Mariage";
-else if (typeRaw === "L41") type = "Loto4";
-   
-
-    let numero = String(j.numero || "").trim();
-
-    freeHtml +=
-      '<div class="game-row">' +
-        '<div class="col-type">' + (type === "L41" ? "Loto4" : type) + '</div>' +
-        '<div class="col-num">' + numero + '</div>' +
-        '<div class="col-amt">Gratis</div>' +
-      '</div>';
-
-  });
-
-});
+    if (footerMessage) {
+      text += NL;
+      text += clean(footerMessage) + NL;
+    }
 
     res.set("Content-Type", "text/html; charset=utf-8");
 
-const APP_CONFIG =
-  await AppConfig.findOne({ key:"main" }).lean()
-  || {};
-
-  const sellerConfig = (vendeur && vendeur.config) ? vendeur.config : {};
-
-const footerMessage =
-(
-  sellerConfig.usarMensajeTicket &&
-  sellerConfig.mensajeTicket
-)
-? sellerConfig.mensajeTicket
-: (APP_CONFIG.ticketMessage || "");
-
-    res.send(`
-<!DOCTYPE html>
-<html>
-<head>
-<meta charset="UTF-8">
-<title>Print</title>
-<style>
-@page{ size:58mm auto; margin:0; }
-body{
-  width:42mm;
-  margin:0 auto;
-  font-family:monospace;
-  font-size:10px;
-}
-.title{text-align:center;font-weight:700;margin-bottom:4px;}
-.meta{margin-bottom:4px;}
-.line{border-top:1px dashed #000;margin:4px 0;}
-.tirage{font-weight:700;margin-top:4px;}
-.game-row{
-  display:grid;
-  grid-template-columns:1fr 30px 40px;
-}
-.col-amt{text-align:right;}
-.total{font-weight:700;margin-top:4px;}
-</style>
-</head>
-<body>
-
-${APP_CONFIG.ticketLogo ? `
-<div style="text-align:center;margin-bottom:6px;">
-  <img
-    src="${APP_CONFIG.ticketLogo}"
-    style="width:120px;max-height:120px;object-fit:contain;"
-  >
-</div>
-` : ""}
-
-<div class="title">NUMBER ONE LOTO</div>
-
-<div class="meta">
-SELLER ${sellerName}<br>
-TICKET ${ticket.id || ticket.ticketId || ticket.serial || ticketId}<br>
-DATE ${dateStr} ${timeStr}
-</div>
-
-<div class="line"></div>
-
-${loteriesHtml}
-
-<div class="line"></div>
-
-${gamesHtml}
-
-${freeHtml}
-
-<div class="line"></div>
-
-<div class="total">TOTAL: ${total.toFixed(2)} G</div>
-
-<div
-  style="
-    margin-top:14px;
-    text-align:center;
-    font-size:8px;
-  "
->
-  ${
-(
-sellerConfig &&
-sellerConfig.usarMensajeTicket &&
-sellerConfig.mensajeTicket
-)
-? sellerConfig.mensajeTicket
-: (footerMessage || "")
-}
-</div>
-
-<script>
-setTimeout(function(){
-  window.print();
-}, 300);
-</script>
-
-</body>
-</html>
-    `);
+    res.send(
+      '<!DOCTYPE html>' +
+      '<html>' +
+      '<head>' +
+      '<meta charset="UTF-8">' +
+      '<title>Print</title>' +
+      '<style>' +
+      '@page{size:58mm auto;margin:0;}' +
+      'body{width:48mm;margin:0 auto;padding:3px;font-family:monospace;font-size:12px;color:#000;}' +
+      'pre{white-space:pre-wrap;margin:0;font-family:monospace;font-size:12px;}' +
+      '</style>' +
+      '</head>' +
+      '<body>' +
+      '<pre>' + clean(text) + '</pre>' +
+      '</body>' +
+      '</html>'
+    );
 
   } catch (err) {
     console.error("PRINT ERROR:", err);
     res.status(500).send("Erreur impression");
   }
 });
+
 
 app.get("/print-report", async (req, res) => {
   try {
@@ -5798,7 +5930,6 @@ setTimeout(function(){
     res.status(500).send("Erreur rapport");
   }
 });
-
 
 
 app.get("/api/reportes/tickets", async (req, res) => {
