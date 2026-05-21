@@ -4225,47 +4225,35 @@ if(!loterieHtml){
     });
   }
 
-if(printBtn){
-  printBtn.onclick = function(){
-
+  if(printBtn){
+  printBtn.addEventListener("click", function(){
     var now = new Date();
 
-    var printDate =
-      String(now.getDate()).padStart(2, "0") + "/" +
-      String(now.getMonth() + 1).padStart(2, "0") + "/" +
-      now.getFullYear();
-
-    var printTime =
-      String(now.getHours()).padStart(2, "0") + ":" +
-      String(now.getMinutes()).padStart(2, "0");
-
-    var url =
+    window.open(
       "/print-report?sellerId=" + encodeURIComponent(sellerId) +
       "&start=" + encodeURIComponent(startValue) +
       "&end=" + encodeURIComponent(endValue) +
-      "&date=" + encodeURIComponent(printDate) +
-      "&time=" + encodeURIComponent(printTime);
+      "&date=" + encodeURIComponent(now.toLocaleDateString("fr-FR")) +
+      "&time=" + encodeURIComponent(now.toLocaleTimeString("fr-FR", {
+        hour: "2-digit",
+        minute: "2-digit"
+      })),
+      "_blank"
+    );
+  });
+}
 
-    fetch(url)
-      .then(function(r){
-        return r.text();
-      })
-      .then(function(html){
-        var doc = new DOMParser().parseFromString(html, "text/html");
-        var text = doc.body.innerText.trim();
+  if(startInput){
+    startInput.addEventListener("change", function(){
+      renderRapports();
+    });
+  }
 
-        if(window.AndroidPrinter && typeof AndroidPrinter.printTicket === "function"){
-          AndroidPrinter.printTicket(text);
-        }else{
-          alert("Printer Android pa disponible");
-        }
-      })
-      .catch(function(err){
-        console.error(err);
-        alert("Erreur impression rapport");
-      });
-
-  };
+  if(endInput){
+    endInput.addEventListener("change", function(){
+      renderRapports();
+    });
+  }
 }
 
 
