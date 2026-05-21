@@ -1545,8 +1545,17 @@ lotRows.forEach(l => {
 });
 
 function minutesNowServer(){
-  const d = new Date();
-  return d.getHours() * 60 + d.getMinutes();
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/New_York",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false
+  }).formatToParts(new Date());
+
+  const h = Number(parts.find(p => p.type === "hour").value);
+  const m = Number(parts.find(p => p.type === "minute").value);
+
+  return h * 60 + m;
 }
 
 function minutesFromTimeServer(t){
