@@ -1707,6 +1707,42 @@ app.get("/api/vendor/sorteos", async (req, res) => {
   }
 });
 
+function timeToMinutes(t){
+  var p = String(t || "").split(":");
+  if(p.length < 2) return null;
+  var h = Number(p[0]);
+  var m = Number(p[1]);
+  if(!Number.isFinite(h) || !Number.isFinite(m)) return null;
+  return h * 60 + m;
+}
+
+function getDayKey(d){
+  return ["sunday","monday","tuesday","wednesday","thursday","friday","saturday"][d.getDay()];
+}
+
+function isLoteriaOpenServer(lot){
+  if(!lot) return true;
+
+  if(String(lot.estatus || "").toUpperCase() !== "ACTIVO"){
+    return false;
+  }
+
+  var now = new Date();
+  var dayKey = getDayKey(now);
+
+  var closeTime =
+    lot.closeDays && lot.closeDays[dayKey]
+      ? lot.closeDays[dayKey]
+      : lot.closeTime;
+
+  var closeMin = timeToMinutes(closeTime);
+  if(closeMin === null) return true;
+
+  var nowMin = now.getHours() * 60 + now.getMinutes();
+
+  return nowMin < closeMin;
+}
+
 app.post("/api/ticket-status", async (req, res) => {
   try {
     const ticketId = String(req.body.id || "").trim();
@@ -1728,6 +1764,25 @@ app.post("/api/ticket-status", async (req, res) => {
     const currentStatus = normalizeStatus(ticket.status);
 
     if (status === "ANILE") {
+
+const allLoterias = await Loteria.find().lean();
+const lotMap = {};
+allLoterias.forEach(l => {
+  lotMap[String(l.name || "").trim().toUpperCase()] = l;
+});
+
+for (const j of (ticket.jeux || [])) {
+  const lotKey = String(j.loterie || "").trim().toUpperCase();
+  const lot = lotMap[lotKey];
+
+  if (!isLoteriaOpenServer(lot)) {
+    return res.json({
+      ok: false,
+      message: "Ou pa ka anile ticket sa. Lotri sa fèmen: " + lotKey
+    });
+  }
+}
+
       const createdAt = new Date(ticket.createdAt || Date.now()).getTime();
       const diffMinutes = (Date.now() - createdAt) / 60000;
 
@@ -3138,10 +3193,16 @@ function autoMarriage(){
    return;
  }
 
- if(!montant.trim()){
-   alert("Mete montan an");
-   return;
- }
+ window.autoMarriageMode = true;
+
+closeOptions();
+document.getElementById("overlay").classList.remove("show");
+
+activeField = "montant";
+cursorMontant = montant.length;
+updateFields();
+
+return;
 
  // 🔥 1. Fè gwoup (12/21, 34/43, etc)
  var groups = [];
@@ -3215,10 +3276,16 @@ function autoLoto4(){
    return;
  }
 
- if(!montant.trim()){
-   alert("Mete montan an");
-   return;
- }
+ window.autoLoto4Mode = true;
+
+closeOptions();
+document.getElementById("overlay").classList.remove("show");
+
+activeField = "montant";
+cursorMontant = montant.length;
+updateFields();
+
+return;
 
  var results = {};
 
@@ -3248,6 +3315,98 @@ function autoLoto4(){
 
  closeOptions();
  document.getElementById("overlay").classList.remove("show");
+ renderJeux();
+ updateFields();
+}
+
+function finishAutoMarriage(){
+ var counts = getAutoSourceBalls();
+ var nums = Object.keys(counts);
+
+ var groups = [];
+ var used = {};
+
+ nums.forEach(function(n){
+   if(used[n]) return;
+   var r = reverse2(n);
+
+   if(nums.includes(r) && r !== n){
+     groups.push([n, r]);
+     used[n] = true;
+     used[r] = true;
+   } else {
+     groups.push([n]);
+     used[n] = true;
+   }
+ });
+
+ var results = [];
+
+ for(var i=0;i<groups.length;i++){
+   for(var j=i+1;j<groups.length;j++){
+     groups[i].forEach(function(a){
+       groups[j].forEach(function(b){
+         if(a === b) return;
+         if(a === reverse2(b)) return;
+         results.push(a + "*" + b);
+       });
+     });
+   }
+ }
+
+ results.forEach(function(numeroAuto){
+   selectedLoteries.forEach(function(lot){
+     mergeOrPushGame({
+       type: "MAR",
+       numero: numeroAuto,
+       loterie: lot,
+       montant: parseFloat(montant) || 0
+     });
+   });
+ });
+
+ montant = "";
+ cursorMontant = 0;
+ activeField = "numero";
+
+ renderJeux();
+ updateFields();
+}
+
+function finishAutoLoto4(){
+ var counts = getAutoSourceBalls();
+ var nums = Object.keys(counts);
+
+ var results = {};
+
+ for(var i=0;i<nums.length;i++){
+   for(var j=i+1;j<nums.length;j++){
+     var a = nums[i];
+     var b = nums[j];
+
+     if(a === b) continue;
+     if(a === reverse2(b)) continue;
+
+     results[a + b] = true;
+     results[b + a] = true;
+   }
+ }
+
+ Object.keys(results).forEach(function(numeroAuto){
+   selectedLoteries.forEach(function(lot){
+     mergeOrPushGame({
+       type: "L41",
+       numero: numeroAuto,
+       loterie: lot,
+       montant: parseFloat(montant) || 0
+     });
+   });
+ });
+
+ montant = "";
+ cursorMontant = 0;
+ activeField = "numero";
+
  renderJeux();
  updateFields();
 }
@@ -4486,7 +4645,31 @@ function copyTicketById(){
       return;
     }
 
-    if(activeField === "montant"){
+   
+   if(activeField === "montant"){
+
+if(window.autoMarriageMode){
+  if(!montant.trim()){
+    alert("Mete montan an");
+    return;
+  }
+
+  window.autoMarriageMode = false;
+  finishAutoMarriage();
+  return;
+}
+
+if(window.autoLoto4Mode){
+  if(!montant.trim()){
+    alert("Mete montan an");
+    return;
+  }
+
+  window.autoLoto4Mode = false;
+  finishAutoLoto4();
+  return;
+}
+
       if(!montant.trim()) return;
 
       if(autoBoulPeMode){
