@@ -1727,8 +1727,11 @@ function isLoteriaOpenServer(lot){
     return false;
   }
 
-  var now = new Date();
-  var dayKey = getDayKey(now);
+  var localNow = new Date(new Date().toLocaleString("en-US", {
+    timeZone: "America/New_York"
+  }));
+
+  var dayKey = getDayKey(localNow);
 
   var closeTime =
     lot.closeDays && lot.closeDays[dayKey]
@@ -1738,7 +1741,7 @@ function isLoteriaOpenServer(lot){
   var closeMin = timeToMinutes(closeTime);
   if(closeMin === null) return true;
 
-  var nowMin = now.getHours() * 60 + now.getMinutes();
+  var nowMin = localNow.getHours() * 60 + localNow.getMinutes();
 
   return nowMin < closeMin;
 }
