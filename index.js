@@ -1894,15 +1894,25 @@ body{color:#111;}
 height:100vh;
 display:flex;
 flex-direction:column;
-}
 .topbar{
-height:60px;
-min-height:60px;
+height:56px;
+min-height:56px;
 background:#3452aa;
 color:#fff;
 display:grid;
-grid-template-columns:60px 1fr 150px;
+grid-template-columns:48px minmax(0,1fr) 128px;
 align-items:center;
+overflow:hidden;
+}
+
+.top-left,.top-right{
+min-width:0;
+}
+
+.top-right{
+justify-content:flex-end;
+padding-right:8px;
+gap:6px;
 }
 .top-left,.top-right{
 display:flex;
@@ -1912,6 +1922,7 @@ gap:12px;
 font-size:24px;
 user-select:none;
 }
+
 .top-title{
 text-align:center;
 font-size:24px;
@@ -2134,10 +2145,25 @@ align-items:center;
 text-align:center;
 font-size:15px;
 }
+
+padding-bottom:4px;
+position:relative;
+z-index:20000;
+}
+
 .nav-item{
 cursor:pointer;
 padding:4px 2px;
 }
+
+.bottom-nav *{
+pointer-events:auto !important;
+}
+
+.keypad{
+z-index:1 !important;
+}
+
 .nav-item.active{
 color:#7a6bf2;
 font-weight:700;
@@ -2426,9 +2452,28 @@ border-right:1px solid #ddd;
 </div>
 <div class="top-title">${sellerName}</div>
 <div class="top-right">
-<span class="icon-btn" onclick="submitPrint()">🖨️</span>
-<span class="icon-btn" onclick="shareWhatsApp()">🟢</span>
+
+<span class="icon-btn" onclick="submitPrint()">
+<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24"
+viewBox="0 0 24 24" fill="none" stroke="currentColor"
+stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+<polyline points="6 9 6 2 18 2 18 9"></polyline>
+<path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path>
+<rect x="6" y="14" width="12" height="8"></rect>
+</svg>
+</span>
+
+<span class="icon-btn" onclick="shareWhatsApp()">
+<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24"
+viewBox="0 0 32 32" fill="none" stroke="currentColor"
+stroke-width="2.2">
+<path d="M16 3C8.82 3 3 8.82 3 16c0 2.54.74 4.91 2 6.91L3 29l6.28-1.95A12.94 12.94 0 0 0 16 29c7.18 0 13-5.82 13-13S23.18 3 16 3z"/>
+<path d="M11.5 10.5c-.4-.9-.8-.9-1.1-.9h-.9c-.3 0-.8.1-1.2.5-.4.4-1.5 1.5-1.5 3.6s1.5 4.2 1.7 4.5c.2.3 2.9 4.6 7.2 6.2 3.5 1.4 4.3 1.1 5.1 1 .8-.1 2.5-1 2.8-2 .4-1 .4-1.8.3-2-.1-.2-.4-.3-.9-.6-.5-.2-2.6-1.3-3-1.4-.4-.2-.7-.2-1 .2-.3.4-1.1 1.4-1.4 1.7-.3.3-.5.3-.9.1-.5-.2-1.9-.7-3.5-2.1-1.3-1.2-2.2-2.6-2.4-3-.3-.5 0-.7.2-1 .2-.2.5-.5.7-.8.2-.3.3-.5.5-.8.2-.3.1-.6 0-.8-.1-.2-.9-2.3-1.3-3.2z"/>
+</svg>
+</span>
+
 <span class="icon-btn" onclick="openOptions()">⋮</span>
+
 </div>
 </div>
 
@@ -4265,6 +4310,39 @@ if(!loterieHtml){
   }
 }
 
+function updateTicketStatus(id, status, premio){
+ fetch("/api/ticket-status", {
+ method: "POST",
+ headers: { "Content-Type": "application/json" },
+ body: JSON.stringify({
+   id: id,
+   status: status,
+   premio: premio || 0
+ })
+ }).then(function(res){
+  return res.json();
+}).then(function(data){
+  if(data && data.ok === false){
+    alert(data.message || "Erreur");
+    return;
+  }
+
+  fetch("/api/vendor/" + encodeURIComponent(sellerId) + "/tickets")
+   .then(function(res){ return res.json(); })
+   .then(function(rows){
+     savedTickets = Array.isArray(rows) ? rows : [];
+     renderBillets();
+     renderRapports();
+
+     if(currentPageName === "balancePage"){
+       renderBalancePage();
+     }
+   });
+ }).catch(function(){
+ alert("Erreur mise à jour status");
+ });
+}
+
 
 function copyTicketById(){
  var id = document.getElementById("copyTicketId").value.trim();
@@ -5746,7 +5824,7 @@ app.get("/print", async (req, res) => {
 
     let text = "";
 
-    text += "      NUMBER ONE LOTO" + NL;
+    text += "      NUMBER ONE LOTO 2" + NL;
     text += "SELLER " + clean(sellerName) + NL;
     text += "TICKET " + clean(ticket.id || ticket.ticketId || ticket.serial || ticketId) + NL;
     text += "DATE " + clean(dateStr) + " " + clean(timeStr) + NL;
