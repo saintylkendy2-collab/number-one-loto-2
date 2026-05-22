@@ -815,7 +815,7 @@ if (special) {
 
     const reste = limit - dejaVendu;
 
-    if (reste <= 0) {
+  if (reste <= 0) {
       return res.json({ ok:false, message:
   "❌ " + loterie + "\n" +
   type + " " + numero + "\n\n" +
@@ -824,8 +824,7 @@ if (special) {
   "Rès disponib: 0.00\n\n" +
   "Limit nimewo sa fini."});
     }
-
-    if (montant > reste) {
+if (Number(j.montant || 0) > reste) {
       return res.json({
         ok:false,
         message:
@@ -834,7 +833,7 @@ if (special) {
   "Limit: " + limit.toFixed(2) + "\n" +
   "Deja vann: " + dejaVendu.toFixed(2) + "\n" +
   "Rès disponib: " + reste.toFixed(2) + "\n\n" +
-  "Ou te mande: " + montant.toFixed(2) + "\n" +
+  "Ou te mande: " + Number(j.montant || 0).toFixed(2) + "\n" +
   "Ou ka vann sèlman: " + reste.toFixed(2)
       });
     }
@@ -1421,35 +1420,32 @@ if (special) {
 
     const reste = limit - dejaVendu;
 
-    if (reste <= 0) {
-      return res.status(403).json({
-        ok:false,
-        message:
-  "❌ " + loterie + "\n" +
-  type + " " + numero + "\n\n" +
+
+  if (reste <= 0) {
+      return res.json({ ok:false, message:
+ "❌ " + j.loterie + "\n" +
+type + " " + j.numero + "\n\n" +
   "Limit: " + limit.toFixed(2) + "\n" +
   "Deja vann: " + dejaVendu.toFixed(2) + "\n" +
   "Rès disponib: 0.00\n\n" +
-  "Limit nimewo sa fini."
-      });
+  "Limit nimewo sa fini."});
     }
 
     if (Number(j.montant || 0) > reste) {
-      return res.status(403).json({
+      return res.json({
         ok:false,
         message:
-  "❌ " + loterie + "\n" +
-  type + " " + numero + "\n\n" +
+ "❌ " + j.loterie + "\n" +
+type + " " + j.numero + "\n\n" +
   "Limit: " + limit.toFixed(2) + "\n" +
   "Deja vann: " + dejaVendu.toFixed(2) + "\n" +
   "Rès disponib: " + reste.toFixed(2) + "\n\n" +
-  "Ou te mande: " + montant.toFixed(2) + "\n" +
+  "Ou te mande: " + Number(j.montant || 0).toFixed(2) + "\n" +
   "Ou ka vann sèlman: " + reste.toFixed(2)
       });
     }
   }
 }
-
     const vendor = await Vendor.findOne({ id: sellerId }).lean();
 
 if (!vendor) {
@@ -4279,21 +4275,45 @@ if(!loterieHtml){
     });
   }
 
-  if(printBtn){
+ if(printBtn){
   printBtn.addEventListener("click", function(){
     var now = new Date();
+    var NL = "\\n";
 
-    window.open(
-      "/print-report?sellerId=" + encodeURIComponent(sellerId) +
-      "&start=" + encodeURIComponent(startValue) +
-      "&end=" + encodeURIComponent(endValue) +
-      "&date=" + encodeURIComponent(now.toLocaleDateString("fr-FR")) +
-      "&time=" + encodeURIComponent(now.toLocaleTimeString("fr-FR", {
-        hour: "2-digit",
-        minute: "2-digit"
-      })),
-      "_blank"
-    );
+    function fm(v){
+      return Number(v || 0).toLocaleString("en-US", {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+      });
+    }
+
+    function row(label, value){
+      var left = "| " + String(label || "").padEnd(12, " ");
+      var right = String(value || "").padStart(12, " ") + " |";
+      return left + right;
+    }
+
+    var text = "";
+    text += "       NUMBER ONE LOTO" + NL;
+    text += "            RAPPORT" + NL;
+    text += "            " + sellerName + NL;
+    text += "   " + toFr(startValue) + " / " + toFr(endValue) + NL;
+    text += "     [ " + now.toLocaleDateString("fr-FR") + " " + now.toLocaleTimeString("fr-FR", {
+      hour: "2-digit",
+      minute: "2-digit"
+    }) + " ]" + NL;
+    text += "------------------------------" + NL;
+    text += row("Ventes", fm(vente)) + NL;
+    text += row("Prix", fm(prime)) + NL;
+    text += row("Commission", fm(commission)) + NL;
+    text += row("Resultat", fm(resultat)) + NL;
+    text += "------------------------------" + NL;
+
+    if(window.AndroidPrinter && typeof AndroidPrinter.printTicket === "function"){
+      AndroidPrinter.printTicket(text);
+    }else{
+      alert(text);
+    }
   });
 }
 
@@ -5879,14 +5899,21 @@ app.get("/print-report", async (req, res) => {
     const sellerId = String(req.query.sellerId || "").trim().toUpperCase();
     const start = String(req.query.start || "").trim();
     const end = String(req.query.end || "").trim();
-
     const printDate = String(req.query.date || "").trim();
     const printTime = String(req.query.time || "").trim();
+    const NL = String.fromCharCode(10);
 
     function money(v) {
       if (v === null || v === undefined) return 0;
       const n = Number(String(v).replace(/,/g, "").trim());
       return Number.isFinite(n) ? n : 0;
+    }
+
+    function formatMoney(v) {
+      return Number(v || 0).toLocaleString("en-US", {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+      });
     }
 
     function formatFRDateInput(iso) {
@@ -5908,6 +5935,19 @@ app.get("/print-report", async (req, res) => {
       return d.getFullYear() + "-" +
         String(d.getMonth() + 1).padStart(2, "0") + "-" +
         String(d.getDate()).padStart(2, "0");
+    }
+
+    function clean(v) {
+      return String(v || "")
+        .replace(/</g, "")
+        .replace(/>/g, "")
+        .replace(/&/g, "and");
+    }
+
+    function row(label, value) {
+      var left = "| " + String(label || "").padEnd(12, " ");
+      var right = String(value || "").padStart(12, " ") + " |";
+      return left + right;
     }
 
     const vendeur = await Vendor.findOne({ id: sellerId }).lean();
@@ -5946,59 +5986,44 @@ app.get("/print-report", async (req, res) => {
     const commission = (vente * rate) / 100;
     const resultat = vente - prix - commission;
 
-    res.set("Content-Type", "text/html; charset=utf-8");
-    res.send(`
-<!DOCTYPE html>
-<html>
-<head>
-<meta charset="UTF-8">
-<title>Rapport</title>
-<style>
-@page{ size:58mm auto; margin:0; }
-html,body{ margin:0; padding:0; background:#fff; }
-body{
-  width:42mm;
-  margin:0 auto;
-  padding:1mm;
-  font-family:monospace;
-  font-size:9px;
-  color:#000;
-  line-height:1.2;
+    let text = "";
+
+    text += "       NUMBER ONE LOTO 2" + NL;
+    text += "            RAPPORT" + NL;
+    text += "            " + clean(sellerName) + NL;
+    text += "   " + formatFRDateInput(start) + " / " + formatFRDateInput(end) + NL;
+    text += "     [ " + clean(printDate) + " " + clean(printTime) + " ]" + NL;
+    text += "------------------------------" + NL;
+    text += row("Ventes", formatMoney(vente)) + NL;
+    text += row("Prix", formatMoney(prix)) + NL;
+    text += row("Commission", formatMoney(commission)) + NL;
+    text += row("Résultat", formatMoney(resultat)) + NL;
+    text += "------------------------------" + NL;
+
+if (String(req.query.raw || "") === "1") {
+  res.set("Content-Type", "text/plain; charset=utf-8");
+  return res.send(text);
 }
-.title{ text-align:center; font-size:10px; font-weight:700; margin-bottom:3px; }
-.center{text-align:center;}
-.line{ border-top:1px dashed #000; margin:4px 0; }
-.row{ display:grid; grid-template-columns:1fr auto; gap:4px; margin:3px 0; }
-.boxline{ border-top:1px dashed #000; border-bottom:1px dashed #000; padding:4px 0; }
-</style>
-</head>
-<body>
-  <div class="title">NUMBER ONE LOTO 2</div>
-  <div class="center">RAPPORT</div>
-  <div class="center">${sellerName}</div>
-  <div class="center">${formatFRDateInput(start)} / ${formatFRDateInput(end)}</div>
-  <div class="center">[ ${printDate} ${printTime} ]</div>
 
-  <div class="line"></div>
+res.set("Content-Type", "text/html; charset=utf-8");
 
- <div class="boxline">
-  <div class="row"><span>| Ventes</span><b>${Number(vente || 0).toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2})} |</b></div>
-
-  <div class="row"><span>| Prix</span><b>${Number(prix || 0).toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2})} |</b></div>
-
-  <div class="row"><span>| Commission</span><b>${Number(commission || 0).toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2})} |</b></div>
-
-  <div class="row"><span>| Balance</span><b>${Number(resultat || 0).toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2})} |</b></div>
-</div>
-
-<script>
-setTimeout(function(){
-  try{ window.print(); }catch(e){}
-},300);
-</script>
-</body>
-</html>
-    `);
+res.send(
+  '<!DOCTYPE html>' +
+  '<html>' +
+  '<head>' +
+  '<meta charset="UTF-8">' +
+  '<title>Rapport</title>' +
+  '<style>' +
+  '@page{size:58mm auto;margin:0;}' +
+  'body{width:48mm;margin:0 auto;padding:3px;font-family:monospace;font-size:12px;color:#000;}' +
+  'pre{white-space:pre-wrap;margin:0;font-family:monospace;font-size:12px;}' +
+  '</style>' +
+  '</head>' +
+  '<body>' +
+  '<pre>' + clean(text) + '</pre>' +
+  '</body>' +
+  '</html>'
+);
 
   } catch (err) {
     console.error("Erreur print-report:", err);
