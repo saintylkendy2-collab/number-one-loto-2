@@ -1990,13 +1990,18 @@ router.get("/api/loterias", async (req, res) => {
         ["TENNESSE MORNING", "TNM", "00:00", "11:55"],
         ["TEXAS MORNING", "TXM", "00:00", "11:55"],
         ["GEORGIA MIDDAY", "GAM", "00:00", "12:25"],
+        ["MARYLAND MIDDAY", "MDM", "00:00", "12:25"],
+        ["NEW JERSEY MIDDAY", "NJM", "00:00", "12:50"],
         ["FLORIDA MIDDAY", "FLM", "00:00", "13:25"],
         ["NEW YORK MIDDAY", "NYM", "00:00", "14:25"],
         ["TEXAS EVENING", "TXE", "00:00", "18:25"],
         ["GEORGIA EVENING", "GAE", "00:00", "18:50"],
         ["TENNESSE EVENING", "TNE", "00:00", "19:25"],
+        ["MARYLAND EVENING", "MDE", "00:00", "19:50"],
         ["FLORIDA EVENING", "FLE", "00:00", "21:30"],
+        ["TEXAS NIGHT", "TXN", "00:00", "22:10"],
         ["NEW YORK EVENING", "NYE", "00:00", "22:25"],
+        ["NEW JERSEY EVENING", "NJE", "00:00", "22:50"],
         ["GEORGIA NIGHT", "GAN", "00:00", "23:15"]
       ];
 
