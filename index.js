@@ -3922,16 +3922,8 @@ function feedbackTouch(){
   }
 }
 
-let printingNow = false;
-
 function rePrintTicket(ticketId){
-
-  if(printingNow) return;
-
-  printingNow = true;
-
   if(!ticketId){
-    printingNow = false;
     alert("Ticket ID pa valid");
     return;
   }
@@ -3945,16 +3937,11 @@ function rePrintTicket(ticketId){
       return r.text();
     })
     .then(function(html){
-
       var doc = new DOMParser().parseFromString(html, "text/html");
       var text = doc.body.innerText.trim();
 
-      if(
-        window.AndroidPrinter &&
-        typeof AndroidPrinter.printTicket === "function"
-      ){
+      if(window.AndroidPrinter && typeof AndroidPrinter.printTicket === "function"){
         AndroidPrinter.printTicket(text);
-
       }else{
         alert("Printer Android pa disponible");
       }
@@ -3962,13 +3949,6 @@ function rePrintTicket(ticketId){
     .catch(function(err){
       console.error(err);
       alert("Erreur impression");
-    })
-    .finally(function(){
-
-      setTimeout(function(){
-        printingNow = false;
-      }, 1500);
-
     });
 }
 
@@ -4097,11 +4077,11 @@ actions.innerHTML =
   btns[3].onclick = function(e){
   e.preventDefault();
   e.stopPropagation();
-
-  if(printingNow) return;
-
   feedbackTouch();
-  rePrintTicket(t.id || t.ticketId || t.serial);
+
+  setTimeout(function(){
+    rePrintTicket(t.id || t.ticketId || t.serial);
+  }, 80);
 };
 
 btns[4].onclick = function(e){
