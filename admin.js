@@ -7330,6 +7330,32 @@ router.post("/api/sorteos-sync", async (req, res) => {
   }
 });
 
+router.post("/api/sorteos-delete-sync", async (req, res) => {
+
+  try {
+
+    const date = String(req.body.date || "").trim();
+
+    const loteria = String(
+      req.body.loteria || ""
+    ).trim().toUpperCase();
+
+    await Sorteo.deleteOne({
+      date,
+      loteria
+    });
+
+    res.json({ ok:true });
+
+  } catch(err){
+
+    res.status(500).json({
+      ok:false
+    });
+
+  }
+
+});
 
 
 module.exports = router;
