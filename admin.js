@@ -433,8 +433,8 @@ function getGainAdmin(j, tirage, config){
   if(type === "BOR"){
     const played = pad2(num);
 
-    if(played === r2) pay = payout(config, "premios.borlette1", 55);
-    else if(played === r3) pay = payout(config, "premios.borlette2", 20);
+    if(played === r2) pay = payout(config, "premios.borlette1", 75);
+    else if(played === r3) pay = payout(config, "premios.borlette2", 15);
     else if(played === r4) pay = payout(config, "premios.borlette3", 10);
   }
 
@@ -469,31 +469,31 @@ function getGainAdmin(j, tirage, config){
   }
 
   else if(type === "L3"){
-    if(num === r1 + r2) pay = payout(config, "premios.loto3", 500);
+    if(num === r1 + r2) pay = payout(config, "premios.loto3", 700);
   }
 
   else if(type === "L41"){
-    if(num === r3 + r4) pay = payout(config, "premios.l41", 5000);
+    if(num === r3 + r4) pay = payout(config, "premios.l41", 4000);
   }
 
   else if(type === "L42"){
-    if(num === r2 + r4) pay = payout(config, "premios.l42", 5000);
+    if(num === r2 + r4) pay = payout(config, "premios.l42", 0);
   }
 
   else if(type === "L43"){
-    if(num === r2 + r3) pay = payout(config, "premios.l43", 5000);
+    if(num === r2 + r3) pay = payout(config, "premios.l43", 0);
   }
 
   else if(type === "L51"){
-    if(num === r1 + r2 + r3) pay = payout(config, "premios.l51", 25000);
+    if(num === r1 + r2 + r3) pay = payout(config, "premios.l51", 0);
   }
 
   else if(type === "L52"){
-    if(num === r1 + r2 + r4) pay = payout(config, "premios.l52", 25000);
+    if(num === r1 + r2 + r4) pay = payout(config, "premios.l52", 0);
   }
 
   else if(type === "L53"){
-    if(num === r2.slice(-1) + r3 + r4) pay = payout(config, "premios.l53", 25000);
+    if(num === r2.slice(-1) + r3 + r4) pay = payout(config, "premios.l53", 0);
   }
 
   return montant * pay;
