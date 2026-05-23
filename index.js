@@ -498,6 +498,26 @@ text-align:center;
 <button class="btn" type="submit">CONNECTER</button>
 <div class="note">Entrez votre ID vendeur et votre mot de passe</div>
 </form>
+
+<script>
+
+const form = document.querySelector(".login-box");
+
+const idInput = document.querySelector('input[name="id"]');
+const passInput = document.querySelector('input[name="password"]');
+
+idInput.value = localStorage.getItem("saved_id") || "";
+passInput.value = localStorage.getItem("saved_pass") || "";
+
+form.addEventListener("submit", function () {
+
+    localStorage.setItem("saved_id", idInput.value);
+    localStorage.setItem("saved_pass", passInput.value);
+
+});
+
+</script>
+
 </body>
 </html>
 `);
