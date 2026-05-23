@@ -1,4 +1,3 @@
-
 const express = require("express");
 const fs = require("fs");
 const path = require("path");
@@ -52,6 +51,9 @@ mongoose.connection.once("open", async () => {
 
     await Ticket.collection.dropIndex("id_1").catch(() => {});
     await Ticket.collection.createIndex({ id: 1 }, { unique: true, sparse: true });
+    await Ticket.collection.createIndex({ vendeur: 1, createdAt: -1 });
+    await Ticket.collection.createIndex({ dateLabel: 1, vendeur: 1, status: 1 });
+    await Sorteo.collection.createIndex({ date: 1, loteria: 1 });
 
     await Ticket.deleteMany({
       $or: [
@@ -3790,17 +3792,33 @@ function submitPrint(){
   });
 }
 
-function shareWhatsApp(){
-  saveCurrentTicket("WHATSAPP").then(function(ticket){
-    if(!ticket) return;
+let submittingWhatsApp = false;
 
-   ticket.vendeurConfig = {
-  usarMensajeTicket: true,
-  mensajeTicket:
-    (sellerConfig && sellerConfig.mensajeTicket)
-    ? sellerConfig.mensajeTicket
-    : ""
-};
+function shareWhatsApp(){
+
+  if(submittingWhatsApp) return;
+
+  if(jeux.length === 0){
+    alert("Pa gen jwèt pou voye.");
+    return;
+  }
+
+  submittingWhatsApp = true;
+
+  saveCurrentTicket("WHATSAPP").then(function(ticket){
+
+    if(!ticket){
+      submittingWhatsApp = false;
+      return;
+    }
+
+    ticket.vendeurConfig = {
+      usarMensajeTicket: true,
+      mensajeTicket:
+        (sellerConfig && sellerConfig.mensajeTicket)
+        ? sellerConfig.mensajeTicket
+        : ""
+    };
 
     var text = buildPrintableTextFromTicket(ticket);
     var url = "https://wa.me/?text=" + encodeURIComponent(text);
@@ -3810,7 +3828,12 @@ function shareWhatsApp(){
     loadBillets();
     resetAfterSend();
 
+    setTimeout(function(){
+      submittingWhatsApp = false;
+    }, 1500);
+
   }).catch(function(err){
+    submittingWhatsApp = false;
     alert("Erreur WhatsApp");
   });
 }

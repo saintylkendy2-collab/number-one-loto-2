@@ -504,17 +504,6 @@ router.get("/api/reportes/ventas", async (req, res) => {
     const start = String(req.query.start || "").trim();
     const end = String(req.query.end || "").trim();
 
-    const vendorsArr = await Vendor.find().lean();
-    const tickets = await Ticket.find().lean();
-
-    const vendeurs = {};
-    vendorsArr.forEach(v => {
-      const id = String(v.id || "").trim().toUpperCase();
-      if (id) vendeurs[id] = v;
-    });
-
-    const map = {};
-
     function ticketDay(t) {
       if (t.dateLabel) {
         const p = String(t.dateLabel).split("/");
@@ -529,12 +518,47 @@ router.get("/api/reportes/ventas", async (req, res) => {
         String(d.getDate()).padStart(2, "0");
     }
 
+    function sorteoKey(date, loteria) {
+      return String(date || "").trim() + "||" + String(loteria || "").trim().toUpperCase();
+    }
+
+    const [vendorsArr, tickets] = await Promise.all([
+      Vendor.find().lean(),
+      Ticket.find({}, "vendeur dateLabel createdAt status total jeux").lean()
+    ]);
+
+    const vendeurs = {};
+    vendorsArr.forEach(v => {
+      const id = String(v.id || "").trim().toUpperCase();
+      if (id) vendeurs[id] = v;
+    });
+
+    const filteredTickets = [];
+    const sorteoDates = new Set();
+
     for (const t of tickets) {
       const d = ticketDay(t);
-
       if (start && d < start) continue;
       if (end && d > end) continue;
 
+      filteredTickets.push(t);
+
+      if (String(t.status || "").trim().toUpperCase() === "GANYE" && t.dateLabel) {
+        sorteoDates.add(String(t.dateLabel || "").trim());
+      }
+    }
+
+    const sorteoMap = {};
+    if (sorteoDates.size) {
+      const sorteos = await Sorteo.find({ date: { $in: Array.from(sorteoDates) } }).lean();
+      sorteos.forEach(s => {
+        sorteoMap[sorteoKey(s.date, s.loteria)] = s;
+      });
+    }
+
+    const map = {};
+
+    for (const t of filteredTickets) {
       const id = String(t.vendeur || "").trim().toUpperCase();
       if (!id) continue;
 
@@ -564,13 +588,7 @@ router.get("/api/reportes/ventas", async (req, res) => {
         let realPremio = 0;
 
         for (const j of t.jeux || []) {
-          const tirage = await Sorteo.findOne({
-            date: String(t.dateLabel || "").trim(),
-            loteria: {
-              $regex: "^" + String(j.loterie || "").trim().replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "$",
-              $options: "i"
-            }
-          }).lean();
+          const tirage = sorteoMap[sorteoKey(t.dateLabel, j.loterie)];
 
           if (tirage) {
             realPremio += getGainAdmin(j, tirage, vendorConfig);
@@ -609,10 +627,10 @@ router.get("/api/reportes/ventas", async (req, res) => {
     });
 
     const finalRows = Object.values(map).filter(r =>
-  parseAmount(r.venta) > 0
-);
+      parseAmount(r.venta) > 0
+    );
 
-res.json(finalRows);
+    res.json(finalRows);
 
   } catch (err) {
     console.error("Erreur ventas:", err);
@@ -658,16 +676,44 @@ router.get("/api/reportes/balance", async (req, res) => {
         String(d.getDate()).padStart(2, "0");
     }
 
+    function sorteoKey(date, loteria) {
+      return String(date || "").trim() + "||" + String(loteria || "").trim().toUpperCase();
+    }
+
     const selectedDate = date || toISODate(new Date());
 
-    const vendorsArr = await Vendor.find().lean();
-    const tickets = await Ticket.find().lean();
+    const [vendorsArr, tickets] = await Promise.all([
+      Vendor.find().lean(),
+      Ticket.find({}, "vendeur dateLabel createdAt status total jeux").lean()
+    ]);
 
     const vendeurs = {};
     vendorsArr.forEach(v => {
       const id = String(v.id || "").trim().toUpperCase();
       if (id) vendeurs[id] = v;
     });
+
+    const filteredTickets = [];
+    const sorteoDates = new Set();
+
+    for (const t of tickets) {
+      const d = ticketDay(t);
+      if (selectedDate && d && d > selectedDate) continue;
+
+      filteredTickets.push(t);
+
+      if (String(t.status || "").trim().toUpperCase() === "GANYE" && t.dateLabel) {
+        sorteoDates.add(String(t.dateLabel || "").trim());
+      }
+    }
+
+    const sorteoMap = {};
+    if (sorteoDates.size) {
+      const sorteos = await Sorteo.find({ date: { $in: Array.from(sorteoDates) } }).lean();
+      sorteos.forEach(s => {
+        sorteoMap[sorteoKey(s.date, s.loteria)] = s;
+      });
+    }
 
     const map = {};
 
@@ -718,12 +764,9 @@ router.get("/api/reportes/balance", async (req, res) => {
       };
     });
 
-    for (const t of tickets) {
+    for (const t of filteredTickets) {
       const id = String(t.vendeur || "").trim().toUpperCase();
       if (!id) continue;
-
-      const d = ticketDay(t);
-      if (selectedDate && d && d > selectedDate) continue;
 
       if (!map[id]) {
         map[id] = {
@@ -751,13 +794,7 @@ router.get("/api/reportes/balance", async (req, res) => {
           const vendorConfig = vendeurs[id] || {};
 
           for (const j of t.jeux || []) {
-            const tirage = await Sorteo.findOne({
-              date: String(t.dateLabel || "").trim(),
-              loteria: {
-                $regex: "^" + String(j.loterie || "").trim().replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "$",
-                $options: "i"
-              }
-            }).lean();
+            const tirage = sorteoMap[sorteoKey(t.dateLabel, j.loterie)];
 
             if (tirage) {
               premios += getGainAdmin(j, tirage, vendorConfig);
@@ -6032,8 +6069,8 @@ async function submitBalanceAction(){
 
     closeBalanceModal();
     await loadVendorsFromServer();
-    await loadVentasReport();
     await loadBalanceReport();
+    renderTransactionsTable();
     alert("Balance mis à jour");
   }catch(err){
     console.error(err);
@@ -6174,7 +6211,6 @@ async function deleteMovimiento(vendorId, movimientoId){
     }
 
     await loadVendorsFromServer();
-    await loadVentasReport();
     await loadBalanceReport();
     renderTransactionsTable();
 
