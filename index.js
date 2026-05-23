@@ -4083,11 +4083,11 @@ actions.innerHTML =
   btns[3].onclick = function(e){
   e.preventDefault();
   e.stopPropagation();
-  feedbackTouch();
 
-  setTimeout(function(){
-    rePrintTicket(t.id || t.ticketId || t.serial);
-  }, 80);
+  if(printingNow) return;
+
+  feedbackTouch();
+  rePrintTicket(t.id || t.ticketId || t.serial);
 };
 
 btns[4].onclick = function(e){
