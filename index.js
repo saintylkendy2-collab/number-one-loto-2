@@ -3581,13 +3581,14 @@ function buildPrintableTextFromTicket(ticket){
   }
 
   function formatType(typeRaw){
-    typeRaw = String(typeRaw || "").toUpperCase();
+  typeRaw = String(typeRaw || "").toUpperCase();
 
-    if(typeRaw === "BOR") return "Borlette";
-    if(typeRaw === "MAR") return "Mariage";
+  if(typeRaw === "BOR") return "Borlette";
+  if(typeRaw === "MAR") return "Mariage";
+  if(typeRaw === "L41") return "Loto4";
 
-    return typeRaw;
-  }
+  return typeRaw;
+}
 
   var sellerConfig =
 (
