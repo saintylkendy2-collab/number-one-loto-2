@@ -7301,4 +7301,35 @@ function renderLimitesEstadisticas(){
 `);
 });
 
+router.post("/api/sorteos-sync", async (req, res) => {
+  try {
+    const date = String(req.body.date || "").trim();
+    const rows = Array.isArray(req.body.rows) ? req.body.rows : [];
+
+    for (const r of rows) {
+      const loteria = String(r.loteria || "").trim().toUpperCase();
+      if (!date || !loteria) continue;
+
+      await Sorteo.findOneAndUpdate(
+        { date: date, loteria: loteria },
+        {
+          date: date,
+          loteria: loteria,
+          r1: String(r.r1 || "").trim(),
+          r2: String(r.r2 || "").trim(),
+          r3: String(r.r3 || "").trim(),
+          r4: String(r.r4 || "").trim()
+        },
+        { upsert: true, new: true }
+      );
+    }
+
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ ok: false });
+  }
+});
+
+
+
 module.exports = router;
