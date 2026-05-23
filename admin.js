@@ -4377,19 +4377,28 @@ function renderSorteosPage(){
   var dateKey = toFRDate(date);
   var saved = sorteosData[dateKey] || sorteosData[date] || {};
 
-  var list = [
-    "TENNESSE MORNING",
-    "TEXAS MORNING",
-    "GEORGIA MIDDAY",
-    "FLORIDA MIDDAY",
-    "NEW YORK MIDDAY",
-    "TEXAS EVENING",
-    "GEORGIA EVENING",
-    "TENNESSE EVENING",
-    "FLORIDA EVENING",
-    "NEW YORK EVENING",
-    "GEORGIA NIGHT"
-  ];
+ var list = [
+  "TENNESSE MORNING",
+  "TEXAS MORNING",
+
+  "GEORGIA MIDDAY",
+  "MARYLAND MIDDAY",
+  "NEW JERSEY MIDDAY",
+  "FLORIDA MIDDAY",
+  "NEW YORK MIDDAY",
+
+  "TEXAS EVENING",
+  "GEORGIA EVENING",
+  "TENNESSE EVENING",
+  "MARYLAND EVENING",
+  "FLORIDA EVENING",
+  "NEW YORK EVENING",
+  "NEW JERSEY EVENING",
+
+  "TEXAS NIGHT",
+
+  "GEORGIA NIGHT"
+];
 
   var html = "";
 
