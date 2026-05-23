@@ -1985,6 +1985,43 @@ router.get("/api/loterias", async (req, res) => {
   try {
     let rows = await Loteria.find().sort({ closeTime: 1 }).lean();
 
+    const missingLoterias = [
+  ["MARYLAND MIDDAY", "MDM", "00:00", "12:25"],
+  ["MARYLAND EVENING", "MDE", "00:00", "19:50"],
+  ["NEW JERSEY MIDDAY", "NJM", "00:00", "12:50"],
+  ["NEW JERSEY EVENING", "NJE", "00:00", "22:50"],
+  ["TEXAS NIGHT", "TXN", "00:00", "22:10"]
+];
+
+for (const x of missingLoterias) {
+  await Loteria.updateOne(
+    { name: x[0] },
+    {
+      $setOnInsert: {
+        name: x[0],
+        abrev: x[1],
+        openTime: x[2],
+        closeTime: x[3],
+        closeDays: {
+          monday: x[3],
+          tuesday: x[3],
+          wednesday: x[3],
+          thursday: x[3],
+          friday: x[3],
+          saturday: x[3],
+          sunday: x[3]
+        },
+        estatus: "Activo",
+        limite: false,
+        pago: true
+      }
+    },
+    { upsert: true }
+  );
+}
+
+rows = await Loteria.find().sort({ closeTime: 1 }).lean();
+
     if (!rows.length) {
       const defaults = [
         ["TENNESSE MORNING", "TNM", "00:00", "11:55"],
