@@ -5997,15 +5997,12 @@ app.get("/print", async (req, res) => {
       return Number(n || 0).toFixed(2);
     }
 
+  
     function lineGame(type, numero, montant){
-
-  if(type === "L41") type = "Loto4";
-
-  var left = String(type || "").padEnd(11, " ");
-  var mid = String(numero || "").padStart(8, " ");
-  var right = String(montant || "").padStart(10, " ");
-
-  return left + mid + right;
+      var left = String(type || "").padEnd(11, " ");
+      var mid = String(numero || "").padStart(8, " ");
+      var right = String(montant || "").padStart(10, " ");
+      return left + mid + right;
 }
 
     let lotSeen = {};
@@ -6035,6 +6032,7 @@ app.get("/print", async (req, res) => {
       let type = typeRaw;
       if (typeRaw === "BOR") type = "Borlette";
       else if (typeRaw === "MAR") type = "Mariage";
+      else if (typeRaw === "L41") type = "Loto4";
 
       let key = loterie + "|" + type + "|" + numero + "|" + montant;
 
@@ -6079,6 +6077,7 @@ app.get("/print", async (req, res) => {
       let type = typeRaw;
       if (typeRaw === "BOR") type = "Borlette";
       else if (typeRaw === "MAR") type = "Mariage";
+      else if (typeRaw === "L41") type = "Loto4";
 
       let numero = String(j.numero || "").trim();
 
