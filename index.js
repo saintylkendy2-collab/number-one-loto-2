@@ -5998,11 +5998,15 @@ app.get("/print", async (req, res) => {
     }
 
     function lineGame(type, numero, montant){
-      var left = String(type || "").padEnd(11, " ");
-      var mid = String(numero || "").padStart(8, " ");
-      var right = String(montant || "").padStart(10, " ");
-      return left + mid + right;
-    }
+
+  if(type === "L41") type = "Loto4";
+
+  var left = String(type || "").padEnd(11, " ");
+  var mid = String(numero || "").padStart(8, " ");
+  var right = String(montant || "").padStart(10, " ");
+
+  return left + mid + right;
+}
 
     let lotSeen = {};
     let loteriesText = "";
