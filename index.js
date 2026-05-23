@@ -651,11 +651,11 @@ function getGain(j, tirage, config){
     const played = pad2(num);
 
     if(played === r2){
-      pay = payout(config, "premios.borlette1", 55);
+      pay = payout(config, "premios.borlette1", 70);
     }
 
     else if(played === r3){
-      pay = payout(config, "premios.borlette2", 20);
+      pay = payout(config, "premios.borlette2", 15);
     }
 
     else if(played === r4){
@@ -685,7 +685,7 @@ function getGain(j, tirage, config){
     const l3 = r1 + r2;
 
     if(num === l3){
-      pay = payout(config, "premios.loto3", 500);
+      pay = payout(config, "premios.loto3", 700);
     }
   }
 
@@ -696,7 +696,7 @@ function getGain(j, tirage, config){
     const l41 = r3 + r4;
 
     if(num === l41){
-      pay = payout(config, "premios.l41", 5000);
+      pay = payout(config, "premios.l41", 4000);
     }
   }
 
@@ -704,7 +704,7 @@ function getGain(j, tirage, config){
     const l42 = r2 + r4;
 
     if(num === l42){
-      pay = payout(config, "premios.l42", 5000);
+      pay = payout(config, "premios.l42", 0);
     }
   }
 
@@ -712,7 +712,7 @@ function getGain(j, tirage, config){
     const l43 = r2 + r3;
 
     if(num === l43){
-      pay = payout(config, "premios.l43", 5000);
+      pay = payout(config, "premios.l43", 0);
     }
   }
 
@@ -723,7 +723,7 @@ function getGain(j, tirage, config){
     const l51 = r1 + r2 + r3;
 
     if(num === l51){
-      pay = payout(config, "premios.l51", 25000);
+      pay = payout(config, "premios.l51", 0);
     }
   }
 
@@ -731,7 +731,7 @@ function getGain(j, tirage, config){
     const l52 = r1 + r2 + r4;
 
     if(num === l52){
-      pay = payout(config, "premios.l52", 25000);
+      pay = payout(config, "premios.l52", 0);
     }
   }
 
@@ -740,7 +740,7 @@ function getGain(j, tirage, config){
     const l53 = lastR2 + r3 + r4;
 
     if(num === l53){
-      pay = payout(config, "premios.l53", 25000);
+      pay = payout(config, "premios.l53", 0);
     }
   }
 
