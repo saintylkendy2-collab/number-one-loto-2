@@ -1581,6 +1581,16 @@ function minutesFromTimeServer(t){
   return (Number(p[0] || 0) * 60) + Number(p[1] || 0);
 }
 
+function getDayKeyServer(){
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/New_York",
+    weekday: "long"
+  }).formatToParts(new Date());
+
+  return String(parts.find(p => p.type === "weekday").value || "")
+    .toLowerCase();
+}
+
 function isLoteriaOpenServer(l){
   if(!l) return true;
 
@@ -1588,9 +1598,16 @@ function isLoteriaOpenServer(l){
     return false;
   }
 
+  const dayKey = getDayKeyServer();
+
+  const closeTime =
+    l.closeDays && l.closeDays[dayKey]
+      ? l.closeDays[dayKey]
+      : l.closeTime;
+
   const nowM = minutesNowServer();
   const openM = minutesFromTimeServer(l.openTime || "00:00");
-  const closeM = minutesFromTimeServer(l.closeTime || "23:59");
+  const closeM = minutesFromTimeServer(closeTime || "23:59");
 
   if(openM <= closeM){
     return nowM >= openM && nowM < closeM;
