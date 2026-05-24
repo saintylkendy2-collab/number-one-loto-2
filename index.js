@@ -1882,19 +1882,31 @@ app.get("/api/vendor/loterias", async (req, res) => {
   try {
     const rows = await Loteria.find().sort({ closeTime: 1 }).lean();
 
-    res.json(rows.map(l => ({
-      name: l.name,
-      sub: "",
-      openTime: l.openTime || "00:00",
-      closeTime: l.closeTime || "23:59",
-      time: l.closeTime || "23:59",
-      estatus: l.estatus || "Activo"
-    })));
+    const dayKey = ["sunday","monday","tuesday","wednesday","thursday","friday","saturday"][new Date().getDay()];
+
+res.json(rows.map(l => {
+  const todayClose = (l.closeDays && l.closeDays[dayKey])
+    ? l.closeDays[dayKey]
+    : l.closeTime;
+
+  return {
+    name: l.name,
+    sub: "",
+    openTime: l.openTime || "00:00",
+    closeTime: todayClose || "23:59",
+    time: todayClose || "23:59",
+    closeDays: l.closeDays || {},
+    estatus: l.estatus || "Activo"
+  };
+}));
   } catch (err) {
     console.error("VENDOR LOTERIAS ERROR:", err);
     res.status(500).json([]);
   }
 });
+
+
+
 
 app.get("/api/vendor/config", async (req, res) => {
   try {
@@ -5863,7 +5875,9 @@ function nowMinutes(){
 function getLoteriaState(l){
   var now = nowMinutes();
   var open = timeToMinutes(l.openTime || "00:00");
-  var close = timeToMinutes(l.closeTime || "23:59");
+  var dayKey = ["sunday","monday","tuesday","wednesday","thursday","friday","saturday"][new Date().getDay()];
+var closeTime = (l.closeDays && l.closeDays[dayKey]) ? l.closeDays[dayKey] : l.closeTime;
+var close = timeToMinutes(closeTime || "23:59");
 
   var active = String(l.estatus || "Activo").toLowerCase() === "activo";
 
