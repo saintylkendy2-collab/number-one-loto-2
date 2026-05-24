@@ -7416,12 +7416,12 @@ router.post("/api/sorteos-sync", async (req, res) => {
       );
     }
 
-runCheckTickets(
+await runCheckTickets(
   date,
   rows.map(r => String(r.loteria || "").trim().toUpperCase())
-).catch(err => console.error("SYNC CHECK TICKETS ERROR:", err));
+);
 
-    res.json({ ok: true });
+res.json({ ok: true });
   } catch (err) {
     res.status(500).json({ ok: false });
   }
