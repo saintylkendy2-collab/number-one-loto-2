@@ -987,7 +987,7 @@ const vendorConfig = vendor || {};
 
     const tickets = await Ticket.find({ vendeur: sellerId })
       .sort({ createdAt: -1 })
-      .limit(100)
+      .limit(500)
       .lean();
 
     const dates = [...new Set(tickets.map(t => String(t.dateLabel || "").trim()).filter(Boolean))];
