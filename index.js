@@ -668,12 +668,12 @@ function getGain(j, tirage, config){
   // =========================
   // MARIAGE
   // =========================
-  else if(type === "MAR"){
-    const combos = [
-      r2 + "*" + r3,
-      r2 + "*" + r4,
-      r3 + "*" + r4
-    ];
+ else if(type === "MAR"){
+  const combos = [
+    r2 + "*" + r3, r3 + "*" + r2,
+    r2 + "*" + r4, r4 + "*" + r2,
+    r3 + "*" + r4, r4 + "*" + r3
+  ];
 
     if(combos.includes(num)){
       pay = payout(config, "premios.mariage", 1000);
@@ -1030,13 +1030,13 @@ const vendorConfig = vendor || {};
         return played === (r1 + r2); // 5 + 55 = 555
       }
 
-      if (type === "MAR") {
-        return [
-          r2 + "*" + r3,
-          r2 + "*" + r4,
-          r3 + "*" + r4
-        ].includes(played);
-      }
+     if (type === "MAR") {
+  return [
+    r2 + "*" + r3, r3 + "*" + r2,
+    r2 + "*" + r4, r4 + "*" + r2,
+    r3 + "*" + r4, r4 + "*" + r3
+  ].includes(played);
+}
 
       return false;
     }
@@ -1223,12 +1223,12 @@ function isWinningGame(j, result){
 
   // MAR
   if(type === "MAR"){
-    return [
-      r2 + "*" + r3,
-      r2 + "*" + r4,
-      r3 + "*" + r4
-    ].includes(played);
-  }
+  return [
+    r2 + "*" + r3, r3 + "*" + r2,
+    r2 + "*" + r4, r4 + "*" + r2,
+    r3 + "*" + r4, r4 + "*" + r3
+  ].includes(played);
+}
 
   return false;
 }

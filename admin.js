@@ -453,10 +453,10 @@ function getGainAdmin(j, tirage, config){
     const played = parts.join("");
 
     const wins = [
-      r2 + r3,
-      r2 + r4,
-      r3 + r4
-    ];
+  r2 + r3, r3 + r2,
+  r2 + r4, r4 + r2,
+  r3 + r4, r4 + r3
+];
 
     if(wins.includes(played)){
       if(isGratis){
