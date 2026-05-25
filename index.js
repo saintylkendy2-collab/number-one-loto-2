@@ -6038,65 +6038,110 @@ app.get("/print", async (req, res) => {
       return left + mid + right;
 }
 
-    let lotSeen = {};
-    let loteriesText = "";
+ const paidRows = [];
 
-    (ticket.jeux || []).forEach(function(j){
-      const lot = String(j.loterie || j.loteria || "").trim().toUpperCase() || "SANS TIRAGE";
+(ticket.jeux || []).forEach(function(j){
+  if (j.gratis === true || j.free === true) return;
 
-      if (!lotSeen[lot]) {
-        lotSeen[lot] = true;
-        loteriesText += clean(lot) + NL;
-      }
-    });
+  let typeRaw = String(j.type || "").toUpperCase();
+  let numero = String(j.numero || "").trim();
+  let montant = Number(j.montant || 0);
+  let loterie = String(j.loterie || j.loteria || "").trim().toUpperCase() || "SANS TIRAGE";
+
+  let type = typeRaw;
+  if (typeRaw === "BOR") type = "Borlette";
+  else if (typeRaw === "MAR") type = "Mariage";
+  else if (typeRaw === "L41") type = "Loto4";
+
+  paidRows.push({ loterie, type, numero, montant });
+});
+
+const loteriesOrder = [];
+paidRows.forEach(function(g){
+  if (!loteriesOrder.includes(g.loterie)) loteriesOrder.push(g.loterie);
+});
+
+let isTogether = false;
+
+if (loteriesOrder.length > 1 && paidRows.length % loteriesOrder.length === 0) {
+  isTogether = paidRows.every(function(g, i){
+    return g.loterie === loteriesOrder[i % loteriesOrder.length];
+  });
+}
+
+let loteriesText = "";
+let gamesText = "";
+
+if (isTogether) {
+  loteriesOrder.forEach(function(lot){
+    loteriesText += clean(lot) + NL;
+  });
+
+  const gameMap = {};
+
+  paidRows.forEach(function(g){
+    let key = g.type + "|" + g.numero + "|" + g.montant;
+
+    if (!gameMap[key]) {
+      gameMap[key] = {
+        type: g.type,
+        numero: g.numero,
+        montant: g.montant
+      };
+    }
+  });
+
+  Object.values(gameMap).forEach(function(g){
+    gamesText += lineGame(
+      g.type,
+      g.numero,
+      money(g.montant)
+    ) + NL;
+  });
+
+} else {
+  const lotMap = {};
+
+  paidRows.forEach(function(g){
+    if (!lotMap[g.loterie]) lotMap[g.loterie] = [];
+    lotMap[g.loterie].push(g);
+  });
+
+  Object.keys(lotMap).forEach(function(lot, index){
+    if (index > 0) {
+      gamesText += "------------------------------" + NL;
+    }
+
+    gamesText += clean(lot) + NL;
+    gamesText += "------------------------------" + NL;
 
     const gameMap = {};
 
-    (ticket.jeux || []).forEach(function(j){
-      if (j.gratis === true || j.free === true) {
-        return;
-      }
-
-      let typeRaw = String(j.type || "").toUpperCase();
-      let numero = String(j.numero || "").trim();
-      let montant = Number(j.montant || 0);
-      let loterie = String(j.loterie || j.loteria || "").trim().toUpperCase();
-
-      let type = typeRaw;
-      if (typeRaw === "BOR") type = "Borlette";
-      else if (typeRaw === "MAR") type = "Mariage";
-      else if (typeRaw === "L41") type = "Loto4";
-
-      let key = loterie + "|" + type + "|" + numero + "|" + montant;
+    lotMap[lot].forEach(function(g){
+      let key = g.type + "|" + g.numero + "|" + g.montant;
 
       if (!gameMap[key]) {
         gameMap[key] = {
-          type: type,
-          numero: numero,
-          montant: montant,
-          count: 0,
-          gratis: j.gratis === true,
-          free: j.free === true
+          type: g.type,
+          numero: g.numero,
+          montant: g.montant,
+          count: 0
         };
       }
 
       gameMap[key].count++;
     });
 
-    let gamesText = "";
-
     Object.values(gameMap).forEach(function(g){
-      let totalLine =
-        g.gratis || g.free
-          ? "Gratis"
-          : money(g.montant * g.count);
-
       gamesText += lineGame(
         g.type,
         g.numero,
-        totalLine
+        money(g.montant * g.count)
       ) + NL;
     });
+  });
+}
+
 
     const freeGames = (ticket.jeux || []).filter(function(j){
       return j.gratis === true || j.free === true;
@@ -6129,10 +6174,12 @@ app.get("/print", async (req, res) => {
     text += "DATE " + clean(dateStr) + " " + clean(timeStr) + NL;
     text += "------------------------------" + NL;
 
-    text += loteriesText;
-    text += "------------------------------" + NL;
+    if (isTogether) {
+  text += loteriesText;
+  text += "------------------------------" + NL;
+}
 
-    text += gamesText;
+text += gamesText;
 
     if (freeText) {
       text += freeText;
