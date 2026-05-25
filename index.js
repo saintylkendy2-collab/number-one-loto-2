@@ -5533,7 +5533,7 @@ function testPrinter(){
         br + ar
       ];
 
-      combos.forEach(function(num){
+      uniqueStrings(combos).forEach(function(num){
         selectedLoteries.forEach(function(lot){
           mergeOrPushGame({
             type: "L41",
