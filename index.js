@@ -817,7 +817,7 @@ if (special) {
 
     const today = new Date().toLocaleDateString("fr-FR");
 
- const tickets = await Ticket.find({
+const tickets = await Ticket.find({
   status: { $ne:"ANILE" }
 }).lean();
 
@@ -846,7 +846,7 @@ if (special) {
   "Rès disponib: 0.00\n\n" +
   "Limit nimewo sa fini."});
     }
-if (Number(j.montant || 0) > reste) {
+if (montant > reste) {
       return res.json({
         ok:false,
         message:
@@ -1420,11 +1420,12 @@ if (special) {
 }
 
   if (limit > 0) {
-    const tickets = await Ticket.find({
-      status: { $ne: "ANILE" },
-      "jeux.numero": String(j.numero || "").trim(),
-      "jeux.loterie": String(j.loterie || "").trim().toUpperCase()
-    }).lean();
+  const tickets = await Ticket.find({
+  status: { $ne: "ANILE" },
+  dateLabel: new Date().toLocaleDateString("fr-FR"),
+  "jeux.numero": String(j.numero || "").trim(),
+  "jeux.loterie": String(j.loterie || "").trim().toUpperCase()
+}).lean(); 
 
     let dejaVendu = 0;
 
