@@ -4243,15 +4243,15 @@ function validateLoteries(){
 (selectedTicketToCopy.jeux || [])
 .filter(j => Number(j.montant || 0) > 0)
 .forEach(function(j){
-      selectedLoteries.forEach(function(lot){
-        jeux.push({
-          type: j.type,
-          numero: j.numero,
-          loterie: lot,
-          montant: Number(j.montant || 0)
-        });
-      });
-    });
+  if(selectedLoteries.indexOf(j.loterie) < 0) return;
+
+  jeux.push({
+    type: j.type,
+    numero: j.numero,
+    loterie: j.loterie,
+    montant: Number(j.montant || 0)
+  });
+});
 
     copyMode = false;
     selectedTicketToCopy = null;
