@@ -6038,7 +6038,7 @@ app.get("/print", async (req, res) => {
       return left + mid + right;
 }
 
- const paidRows = [];
+  const paidRows = [];
 
 (ticket.jeux || []).forEach(function(j){
   if (j.gratis === true || j.free === true) return;
@@ -6141,7 +6141,6 @@ if (isTogether) {
     });
   });
 }
-
 
     const freeGames = (ticket.jeux || []).filter(function(j){
       return j.gratis === true || j.free === true;
