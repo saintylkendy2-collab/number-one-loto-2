@@ -1521,7 +1521,18 @@ router.get("/master/ticket/:id", async (req, res) => {
       (ticket.timeLabel ? " " + ticket.timeLabel : ""));
 
     const lignes = jeux.map((j) => {
-      const gain = Number(j.gain || 0);
+      let gain = Number(j.gain || 0);
+
+if((j.type || "").toUpperCase() === "BOR"){
+  const played = String(j.numero || "").padStart(2, "0");
+  const monto = Number(j.monto || j.montant || 0);
+
+  gain = 0;
+
+  if(played === r2) gain += payout(config, "premios.borlette1", 70) * monto;
+  if(played === r3) gain += payout(config, "premios.borlette2", 15) * monto;
+  if(played === r4) gain += payout(config, "premios.borlette3", 10) * monto;
+}
 
       return "<tr>" +
         "<td>" + (j.loterie || "") + "</td>" +
