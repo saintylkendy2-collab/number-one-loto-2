@@ -649,21 +649,21 @@ function getGain(j, tirage, config){
   // =========================
   // BORLETTE
   // =========================
-  if(type === "BOR"){
-    const played = pad2(num);
+ if(type === "BOR"){
+  const played = pad2(num);
 
-    if(played === r2){
-      pay = payout(config, "premios.borlette1", 70);
-    }
-
-    else if(played === r3){
-      pay = payout(config, "premios.borlette2", 15);
-    }
-
-    else if(played === r4){
-      pay = payout(config, "premios.borlette3", 10);
-    }
+  if(played === r2){
+    pay += payout(config, "premios.borlette1", 70);
   }
+
+  if(played === r3){
+    pay += payout(config, "premios.borlette2", 15);
+  }
+
+  if(played === r4){
+    pay += payout(config, "premios.borlette3", 10);
+  }
+}
 
   // =========================
   // MARIAGE
