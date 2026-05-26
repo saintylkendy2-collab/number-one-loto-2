@@ -649,21 +649,26 @@ function getGain(j, tirage, config){
   // =========================
   // BORLETTE
   // =========================
- if(type === "BOR"){
-  const played = pad2(num);
+let pay = 0;
 
-  if(played === r2){
-    pay += payout(config, "premios.borlette1", 70);
-  }
+if(type === "BOR"){
 
-  if(played === r3){
-    pay += payout(config, "premios.borlette2", 15);
-  }
+   const played = pad2(num);
 
-  if(played === r4){
-    pay += payout(config, "premios.borlette3", 10);
-  }
+   if(played === r2){
+      pay += payout(config, "premios.borlette1", 70);
+   }
+
+   if(played === r3){
+      pay += payout(config, "premios.borlette2", 15);
+   }
+
+   if(played === r4){
+      pay += payout(config, "premios.borlette3", 10);
+   }
 }
+
+
 
   // =========================
   // MARIAGE
@@ -1212,9 +1217,14 @@ function isWinningGame(j, result){
   const r4 = pad2(result.r4);
 
   // BOR
-  if(type === "BOR"){
-    return [r2, r3, r4].includes(pad2(played));
-  }
+    let count = 0;
+
+   if(p === r2) count++;
+   if(p === r3) count++;
+   if(p === r4) count++;
+
+   return count;
+
 
   // L3
   if(type === "L3"){
