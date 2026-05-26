@@ -4240,16 +4240,26 @@ function validateLoteries(){
     cursorMontant = 0;
     activeField = "numero";
 
-(selectedTicketToCopy.jeux || [])
-.filter(j => Number(j.montant || 0) > 0)
-.forEach(function(j){
-  if(selectedLoteries.indexOf(j.loterie) < 0) return;
+const baseJeux = [];
+const seen = {};
 
-  jeux.push({
-    type: j.type,
-    numero: j.numero,
-    loterie: j.loterie,
-    montant: Number(j.montant || 0)
+(selectedTicketToCopy.jeux || [])
+.filter(j => Number(j.montant || j.monto || j.amount || 0) > 0)
+.forEach(function(j){
+  const key = String(j.type || "") + "|" + String(j.numero || "") + "|" + Number(j.montant || j.monto || j.amount || 0);
+  if(seen[key]) return;
+  seen[key] = true;
+  baseJeux.push(j);
+});
+
+baseJeux.forEach(function(j){
+  selectedLoteries.forEach(function(lot){
+    jeux.push({
+      type: j.type,
+      numero: j.numero,
+      loterie: lot,
+      montant: Number(j.montant || j.monto || j.amount || 0)
+    });
   });
 });
 
