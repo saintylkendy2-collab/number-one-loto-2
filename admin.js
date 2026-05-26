@@ -430,12 +430,12 @@ function getGainAdmin(j, tirage, config){
 
   let pay = 0;
 
- if(type === "BOR"){
+if(type === "BOR"){
   const played = pad2(num);
 
-  if(played === r2) pay += payout(config, "premios.borlette1", 70) * montant;
-  if(played === r3) pay += payout(config, "premios.borlette2", 15) * montant;
-  if(played === r4) pay += payout(config, "premios.borlette3", 10) * montant;
+  if(played === r2) pay += payout(config, "premios.borlette1", 70);
+  if(played === r3) pay += payout(config, "premios.borlette2", 15);
+  if(played === r4) pay += payout(config, "premios.borlette3", 10);
 }
 
 
