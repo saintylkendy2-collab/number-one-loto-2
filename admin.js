@@ -433,9 +433,17 @@ function getGainAdmin(j, tirage, config){
  if(type === "BOR"){
   const played = pad2(num);
 
-  if(played === r2) pay += payout(config, "premios.borlette1", 70);
-  if(played === r3) pay += payout(config, "premios.borlette2", 15);
-  if(played === r4) pay += payout(config, "premios.borlette3", 10);
+  if(played === r2){
+    pay += payout(config, "premios.borlette1", 70);
+  }
+
+  if(played === r3){
+    pay += payout(config, "premios.borlette2", 15);
+  }
+
+  if(played === r4){
+    pay += payout(config, "premios.borlette3", 10);
+  }
 }
 
   else if(type === "MAR"){
@@ -1513,12 +1521,7 @@ router.get("/master/ticket/:id", async (req, res) => {
       (ticket.timeLabel ? " " + ticket.timeLabel : ""));
 
     const lignes = jeux.map((j) => {
-  const gain = getGainAdmin(j, {
-    r1: "",
-    r2: "72",
-    r3: "72",
-    r4: "72"
-  }, {});
+      const gain = Number(j.gain || 0);
 
       return "<tr>" +
         "<td>" + (j.loterie || "") + "</td>" +
