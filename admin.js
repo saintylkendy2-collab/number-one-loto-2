@@ -1513,7 +1513,12 @@ router.get("/master/ticket/:id", async (req, res) => {
       (ticket.timeLabel ? " " + ticket.timeLabel : ""));
 
     const lignes = jeux.map((j) => {
-      const gain = Number(j.gain || 0);
+  const gain = getGainAdmin(j, {
+    r1: "",
+    r2: "72",
+    r3: "72",
+    r4: "72"
+  }, {});
 
       return "<tr>" +
         "<td>" + (j.loterie || "") + "</td>" +
