@@ -433,18 +433,11 @@ function getGainAdmin(j, tirage, config){
  if(type === "BOR"){
   const played = pad2(num);
 
-  if(played === r2){
-    pay += payout(config, "premios.borlette1", 70);
-  }
-
-  if(played === r3){
-    pay += payout(config, "premios.borlette2", 15);
-  }
-
-  if(played === r4){
-    pay += payout(config, "premios.borlette3", 10);
-  }
+  if(played === r2) pay += payout(config, "premios.borlette1", 70) * montant;
+  if(played === r3) pay += payout(config, "premios.borlette2", 15) * montant;
+  if(played === r4) pay += payout(config, "premios.borlette3", 10) * montant;
 }
+
 
   else if(type === "MAR"){
     const isGratis =
@@ -1520,18 +1513,27 @@ router.get("/master/ticket/:id", async (req, res) => {
       ((ticket.dateLabel || "") +
       (ticket.timeLabel ? " " + ticket.timeLabel : ""));
 
-    const lignes = jeux.map((j) => {
-      let gain = Number(j.gain || 0);
+const lignes = jeux.map((j) => {
+  let gain = Number(j.gain || 0);
 
 if((j.type || "").toUpperCase() === "BOR"){
+
   const played = String(j.numero || "").padStart(2, "0");
-  const monto = Number(j.monto || j.montant || 0);
+  const monto = Number(j.montant || j.monto || j.amount || 0);
 
   gain = 0;
 
-  if(played === r2) gain += payout(config, "premios.borlette1", 70) * monto;
-  if(played === r3) gain += payout(config, "premios.borlette2", 15) * monto;
-  if(played === r4) gain += payout(config, "premios.borlette3", 10) * monto;
+  if(played === r2){
+    gain += payout(config, "premios.borlette1", 70) * monto;
+  }
+
+  if(played === r3){
+    gain += payout(config, "premios.borlette2", 15) * monto;
+  }
+
+  if(played === r4){
+    gain += payout(config, "premios.borlette3", 10) * monto;
+  }
 }
 
       return "<tr>" +
