@@ -6082,17 +6082,6 @@ if (loteriesOrder.length > 1) {
   });
 }
 
-isTogether = loteriesOrder.every(function(lot){
-  const arr = map[lot] || [];
-
-  if (arr.length !== first.length) return false;
-
-  return first.every(function(key){
-    return arr.indexOf(key) >= 0;
-  });
-});
-
-
 let loteriesText = "";
 let gamesText = "";
 
