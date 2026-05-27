@@ -4240,15 +4240,63 @@ function validateLoteries(){
     cursorMontant = 0;
     activeField = "numero";
 
+const oldLoteries = [];
+
 (selectedTicketToCopy.jeux || []).forEach(function(j){
-  if (selectedLoteries.indexOf(j.loterie) < 0) return;
+
+  const montantJ = Number(j.montant || j.monto || j.amount || 0);
+
+  if(montantJ <= 0) return;
+
+  const typeJ = String(j.type || "").toUpperCase();
+
+  const isGratisMariage =
+    typeJ === "MAR" &&
+    (
+      j.gratis === true ||
+      j.free === true ||
+      montantJ === 0
+    );
+
+  if(isGratisMariage) return;
+
+  const oldLot = String(j.loterie || j.loteria || "").trim();
+
+  if(oldLot && oldLoteries.indexOf(oldLot) < 0){
+    oldLoteries.push(oldLot);
+  }
+
+});
+
+(selectedTicketToCopy.jeux || []).forEach(function(j){
+
+  const montantJ = Number(j.montant || j.monto || j.amount || 0);
+
+  if(montantJ <= 0) return;
+
+  const typeJ = String(j.type || "").toUpperCase();
+
+  const isGratisMariage =
+    typeJ === "MAR" &&
+    (
+      j.gratis === true ||
+      j.free === true ||
+      montantJ === 0
+    );
+
+  if(isGratisMariage) return;
+
+  const oldLot = String(j.loterie || j.loteria || "").trim();
+
+  const idx = oldLoteries.indexOf(oldLot);
 
   jeux.push({
     type: j.type,
     numero: j.numero,
-    loterie: j.loterie,
-    montant: Number(j.montant || 0)
+    loterie: selectedLoteries[idx] || selectedLoteries[0] || oldLot,
+    montant: montantJ
   });
+
 });
 
     copyMode = false;
