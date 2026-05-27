@@ -4240,18 +4240,16 @@ function validateLoteries(){
     cursorMontant = 0;
     activeField = "numero";
 
-(selectedTicketToCopy.jeux || [])
-.filter(j => Number(j.montant || 0) > 0)
-.forEach(function(j){
-      selectedLoteries.forEach(function(lot){
-        jeux.push({
-          type: j.type,
-          numero: j.numero,
-          loterie: lot,
-          montant: Number(j.montant || 0)
-        });
-      });
-    });
+(selectedTicketToCopy.jeux || []).forEach(function(j){
+  if (selectedLoteries.indexOf(j.loterie) < 0) return;
+
+  jeux.push({
+    type: j.type,
+    numero: j.numero,
+    loterie: j.loterie,
+    montant: Number(j.montant || 0)
+  });
+});
 
     copyMode = false;
     selectedTicketToCopy = null;
@@ -6062,6 +6060,27 @@ paidRows.forEach(function(g){
 });
 
 let isTogether = false;
+
+if (loteriesOrder.length > 1) {
+  const map = {};
+
+  paidRows.forEach(function(g){
+    if (!map[g.loterie]) map[g.loterie] = [];
+    map[g.loterie].push(g.type + "|" + g.numero + "|" + g.montant);
+  });
+
+  const first = map[loteriesOrder[0]] || [];
+
+  isTogether = loteriesOrder.every(function(lot){
+    const arr = map[lot] || [];
+
+    if (arr.length !== first.length) return false;
+
+    return first.every(function(key){
+      return arr.indexOf(key) >= 0;
+    });
+  });
+}
 
 isTogether = loteriesOrder.every(function(lot){
   const arr = map[lot] || [];
