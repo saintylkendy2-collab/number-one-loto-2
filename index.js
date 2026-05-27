@@ -6063,26 +6063,6 @@ paidRows.forEach(function(g){
 
 let isTogether = false;
 
-if (loteriesOrder.length > 1) {
-  const map = {};
-
-  paidRows.forEach(function(g){
-    if (!map[g.loterie]) map[g.loterie] = [];
-    map[g.loterie].push(g.type + "|" + g.numero + "|" + g.montant);
-  });
-
-  const first = map[loteriesOrder[0]] || [];
-
-  isTogether = loteriesOrder.every(function(lot){
-    const arr = map[lot] || [];
-
-    if (arr.length !== first.length) return false;
-
-    return first.every(function(key){
-      return arr.indexOf(key) >= 0;
-    });
-  });
-}
 
 let loteriesText = "";
 let gamesText = "";
