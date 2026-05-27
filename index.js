@@ -4240,28 +4240,18 @@ function validateLoteries(){
     cursorMontant = 0;
     activeField = "numero";
 
-const baseJeux = [];
-const seen = {};
-
 (selectedTicketToCopy.jeux || [])
-.filter(j => Number(j.montant || j.monto || j.amount || 0) > 0)
+.filter(j => Number(j.montant || 0) > 0)
 .forEach(function(j){
-  const key = String(j.type || "") + "|" + String(j.numero || "") + "|" + Number(j.montant || j.monto || j.amount || 0);
-  if(seen[key]) return;
-  seen[key] = true;
-  baseJeux.push(j);
-});
-
-baseJeux.forEach(function(j){
-  selectedLoteries.forEach(function(lot){
-    jeux.push({
-      type: j.type,
-      numero: j.numero,
-      loterie: lot,
-      montant: Number(j.montant || j.monto || j.amount || 0)
+      selectedLoteries.forEach(function(lot){
+        jeux.push({
+          type: j.type,
+          numero: j.numero,
+          loterie: lot,
+          montant: Number(j.montant || 0)
+        });
+      });
     });
-  });
-});
 
     copyMode = false;
     selectedTicketToCopy = null;
@@ -6073,9 +6063,24 @@ paidRows.forEach(function(g){
 
 let isTogether = false;
 
-if (loteriesOrder.length > 1 && paidRows.length % loteriesOrder.length === 0) {
-  isTogether = paidRows.every(function(g, i){
-    return g.loterie === loteriesOrder[i % loteriesOrder.length];
+if (loteriesOrder.length > 1) {
+  const map = {};
+
+  paidRows.forEach(function(g){
+    if (!map[g.loterie]) map[g.loterie] = [];
+    map[g.loterie].push(g.type + "|" + g.numero + "|" + g.montant);
+  });
+
+  const first = map[loteriesOrder[0]] || [];
+
+  isTogether = loteriesOrder.every(function(lot){
+    const arr = map[lot] || [];
+
+    if (arr.length !== first.length) return false;
+
+    return first.every(function(key){
+      return arr.indexOf(key) >= 0;
+    });
   });
 }
 
