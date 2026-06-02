@@ -1769,15 +1769,17 @@ function isWinningGame(j, result) {
 
 async function runCheckTickets(date, loteries = []) {
 
-  const tickets = await Ticket.find({
-    status: { $ne: "ANILE" },
-    dateLabel: String(date || "").trim(),
-    tirages: {
-      $in: loteries.map(l =>
-        String(l || "").trim().toUpperCase()
-      )
-    }
-  });
+ const tickets = await Ticket.find({
+  status: { $ne: "ANILE" },
+  dateLabel: cleanDate,
+  tirages: { $in: lots }
+}).lean();
+
+const allLots = [...new Set(
+  tickets.flatMap(t =>
+    (t.tirages || []).map(l => String(l || "").trim().toUpperCase())
+  ).filter(Boolean)
+)];
 
   let checked = 0;
 
