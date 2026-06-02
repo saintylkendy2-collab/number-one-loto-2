@@ -501,31 +501,49 @@ if(type === "BOR"){
 }
 
 router.get("/api/reportes/ventas", async (req, res) => {
+  console.time("VENTAS_REPORT");
   try {
     const start = String(req.query.start || "").trim();
     const end = String(req.query.end || "").trim();
 
-    function ticketDay(t) {
-      if (t.dateLabel) {
-        const p = String(t.dateLabel).split("/");
-        if (p.length === 3) {
-          return p[2] + "-" + p[1].padStart(2, "0") + "-" + p[0].padStart(2, "0");
-        }
+    function isoToFR(v){
+      const s = String(v || "").trim();
+      if (/^\d{4}-\d{2}-\d{2}$/.test(s)) {
+        const p = s.split("-");
+        return p[2] + "/" + p[1] + "/" + p[0];
       }
-
-      const d = new Date(t.createdAt || Date.now());
-      return d.getFullYear() + "-" +
-        String(d.getMonth() + 1).padStart(2, "0") + "-" +
-        String(d.getDate()).padStart(2, "0");
+      return s;
     }
 
-    function sorteoKey(date, loteria) {
-      return String(date || "").trim() + "||" + String(loteria || "").trim().toUpperCase();
+    function buildDateQuery(a, b){
+      const fa = isoToFR(a);
+      const fb = isoToFR(b || a);
+      const q = {};
+
+      if (fa && fb && fa === fb) {
+        q.dateLabel = fa;
+      } else if (fa && fb) {
+        const ai = String(a || "").trim();
+        const bi = String(b || a || "").trim();
+        q.$expr = {
+          $and: [
+            { $gte: [ { $concat: [ { $substr: ["$dateLabel", 6, 4] }, "-", { $substr: ["$dateLabel", 3, 2] }, "-", { $substr: ["$dateLabel", 0, 2] } ] }, ai ] },
+            { $lte: [ { $concat: [ { $substr: ["$dateLabel", 6, 4] }, "-", { $substr: ["$dateLabel", 3, 2] }, "-", { $substr: ["$dateLabel", 0, 2] } ] }, bi ] }
+          ]
+        };
+      } else if (fa) {
+        q.dateLabel = fa;
+      }
+      return q;
     }
+
+    const ticketQuery = buildDateQuery(start, end);
 
     const [vendorsArr, tickets] = await Promise.all([
       Vendor.find().lean(),
-      Ticket.find({}, "vendeur dateLabel createdAt status total jeux").lean()
+      Ticket.find(ticketQuery)
+        .select("vendeur dateLabel status total premio")
+        .lean()
     ]);
 
     const vendeurs = {};
@@ -534,32 +552,9 @@ router.get("/api/reportes/ventas", async (req, res) => {
       if (id) vendeurs[id] = v;
     });
 
-    const filteredTickets = [];
-    const sorteoDates = new Set();
-
-    for (const t of tickets) {
-      const d = ticketDay(t);
-      if (start && d < start) continue;
-      if (end && d > end) continue;
-
-      filteredTickets.push(t);
-
-      if (String(t.status || "").trim().toUpperCase() === "GANYE" && t.dateLabel) {
-        sorteoDates.add(String(t.dateLabel || "").trim());
-      }
-    }
-
-    const sorteoMap = {};
-    if (sorteoDates.size) {
-      const sorteos = await Sorteo.find({ date: { $in: Array.from(sorteoDates) } }).lean();
-      sorteos.forEach(s => {
-        sorteoMap[sorteoKey(s.date, s.loteria)] = s;
-      });
-    }
-
     const map = {};
 
-    for (const t of filteredTickets) {
+    for (const t of tickets) {
       const id = String(t.vendeur || "").trim().toUpperCase();
       if (!id) continue;
 
@@ -580,62 +575,26 @@ router.get("/api/reportes/ventas", async (req, res) => {
         };
       }
 
-      if (status !== "ANILE") {
-        map[id].venta += parseAmount(t.total);
-      }
-
-      if (status === "GANYE") {
-        const vendorConfig = vendeurs[id] || {};
-        let realPremio = 0;
-
-        for (const j of t.jeux || []) {
-          const tirage = sorteoMap[sorteoKey(t.dateLabel, j.loterie)];
-
-          if (tirage) {
-            realPremio += getGainAdmin(j, tirage, vendorConfig);
-          }
-        }
-
-        map[id].premios += realPremio;
-      }
+      if (status !== "ANILE") map[id].venta += parseAmount(t.total);
+      if (status === "GANYE") map[id].premios += parseAmount(t.premio);
     }
 
     Object.keys(map).forEach(id => {
       const vendor = normalizeVendor(vendeurs[id] || {});
-
-      const rate = parseAmount(
-        vendor.comision?.general ??
-        vendor.comisionGeneral ??
-        vendor.com_general ??
-        0
-      );
-
-      const rateGrupo = parseAmount(
-        vendor.comision?.zona ??
-        vendor.comisionZona ??
-        vendor.com_zona ??
-        0
-      );
+      const rate = parseAmount(vendor.comision?.general ?? vendor.comisionGeneral ?? vendor.com_general ?? 0);
+      const rateGrupo = parseAmount(vendor.comision?.zona ?? vendor.comisionZona ?? vendor.com_zona ?? 0);
 
       map[id].comision = (parseAmount(map[id].venta) * rate) / 100;
       map[id].comisionGrupo = (parseAmount(map[id].venta) * rateGrupo) / 100;
-
-      // RESULTADO PA RETIRE COMISION GRUPO
-      map[id].resultado =
-        parseAmount(map[id].venta) -
-        parseAmount(map[id].comision) -
-        parseAmount(map[id].premios);
+      map[id].resultado = parseAmount(map[id].venta) - parseAmount(map[id].comision) - parseAmount(map[id].premios);
     });
 
-    const finalRows = Object.values(map).filter(r =>
-      parseAmount(r.venta) > 0
-    );
-
-    res.json(finalRows);
-
+    res.json(Object.values(map).filter(r => parseAmount(r.venta) > 0));
   } catch (err) {
     console.error("Erreur ventas:", err);
     res.status(500).json([]);
+  } finally {
+    console.timeEnd("VENTAS_REPORT");
   }
 });
 
@@ -683,10 +642,46 @@ router.get("/api/reportes/balance", async (req, res) => {
 
     const selectedDate = date || toISODate(new Date());
 
-    const [vendorsArr, tickets] = await Promise.all([
-      Vendor.find().lean(),
-      Ticket.find({}, "vendeur dateLabel createdAt status total jeux").lean()
-    ]);
+   const [vendorsArr, ticketAgg] = await Promise.all([
+  Vendor.find().lean(),
+
+  Ticket.aggregate([
+    {
+      $project: {
+        vendeur: 1,
+        status: 1,
+        total: 1,
+        premio: 1,
+        isoDate: {
+          $concat: [
+            { $substr: ["$dateLabel", 6, 4] },
+            "-",
+            { $substr: ["$dateLabel", 3, 2] },
+            "-",
+            { $substr: ["$dateLabel", 0, 2] }
+          ]
+        }
+      }
+    },
+    {
+      $match: {
+        isoDate: { $lte: selectedDate }
+      }
+    },
+    {
+      $group: {
+        _id: "$vendeur",
+        tickets: {
+          $push: {
+            status: "$status",
+            total: "$total",
+            premio: "$premio"
+          }
+        }
+      }
+    }
+  ])
+]);
 
     const vendeurs = {};
     vendorsArr.forEach(v => {
@@ -694,27 +689,7 @@ router.get("/api/reportes/balance", async (req, res) => {
       if (id) vendeurs[id] = v;
     });
 
-    const filteredTickets = [];
-    const sorteoDates = new Set();
 
-    for (const t of tickets) {
-      const d = ticketDay(t);
-      if (selectedDate && d && d > selectedDate) continue;
-
-      filteredTickets.push(t);
-
-      if (String(t.status || "").trim().toUpperCase() === "GANYE" && t.dateLabel) {
-        sorteoDates.add(String(t.dateLabel || "").trim());
-      }
-    }
-
-    const sorteoMap = {};
-    if (sorteoDates.size) {
-      const sorteos = await Sorteo.find({ date: { $in: Array.from(sorteoDates) } }).lean();
-      sorteos.forEach(s => {
-        sorteoMap[sorteoKey(s.date, s.loteria)] = s;
-      });
-    }
 
     const map = {};
 
@@ -765,47 +740,37 @@ router.get("/api/reportes/balance", async (req, res) => {
       };
     });
 
-    for (const t of filteredTickets) {
-      const id = String(t.vendeur || "").trim().toUpperCase();
-      if (!id) continue;
+ for (const group of ticketAgg) {
+  const id = String(group._id || "").trim().toUpperCase();
+  if (!id) continue;
 
-      if (!map[id]) {
-        map[id] = {
-          id,
-          nombre: id,
-          zona: "",
-          balance: 0,
-          estatus: "Activo",
-          collectionsLivrees: [],
-          paiementsRecus: []
-        };
-      }
+  if (!map[id]) {
+    map[id] = {
+      id,
+      nombre: id,
+      zona: "",
+      balance: 0,
+      estatus: "Activo",
+      collectionsLivrees: [],
+      paiementsRecus: []
+    };
+  }
 
-      const vendor = normalizeVendor(vendeurs[id] || {});
-      const rate = getCommissionRate(vendor);
-      const status = String(t.status || "").trim().toUpperCase();
+  const vendor = normalizeVendor(vendeurs[id] || {});
+  const rate = getCommissionRate(vendor);
 
-      if (status !== "ANILE") {
-        const venta = parseAmount(t.total);
-        const comision = (venta * rate) / 100;
+  for (const t of group.tickets || []) {
+    const status = String(t.status || "").trim().toUpperCase();
 
-        let premios = 0;
+    if (status !== "ANILE") {
+      const venta = parseAmount(t.total);
+      const comision = (venta * rate) / 100;
+      const premios = status === "GANYE" ? parseAmount(t.premio) : 0;
 
-        if (status === "GANYE") {
-          const vendorConfig = vendeurs[id] || {};
-
-          for (const j of t.jeux || []) {
-            const tirage = sorteoMap[sorteoKey(t.dateLabel, j.loterie)];
-
-            if (tirage) {
-              premios += getGainAdmin(j, tirage, vendorConfig);
-            }
-          }
-        }
-
-        map[id].balance += venta - comision - premios;
-      }
+      map[id].balance += venta - comision - premios;
     }
+  }
+}
 
     res.json(Object.values(map));
 
@@ -1404,65 +1369,6 @@ function writeTicketsArray(data) {
   fs.writeFileSync(TICKETS_FILE, JSON.stringify(data, null, 2), "utf8");
 }
 
-router.get("/api/reportes/tickets", async (req, res) => {
-  try {
-    const tickets = await Ticket.find().sort({ createdAt: -1 }).lean();
-
-    const vendorsArr = await Vendor.find().lean();
-    const vendeurs = {};
-
-    vendorsArr.forEach(v => {
-      const id = String(v.id || "").trim().toUpperCase();
-      if (id) vendeurs[id] = v;
-    });
-
-    const cleanTickets = [];
-
-    for (const t of tickets) {
-      const realId = t.id || t.ticketId || t.serial || String(t._id || "");
-      const vendorId = String(t.vendeur || "").trim().toUpperCase();
-      const vendorConfig = vendeurs[vendorId] || {};
-
-      let totalGain = 0;
-
-      const jeux = [];
-      for (const j of t.jeux || []) {
-        const tirage = await Sorteo.findOne({
-          date: String(t.dateLabel || "").trim(),
-          loteria: {
-            $regex: "^" + String(j.loterie || "").trim().replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "$",
-            $options: "i"
-          }
-        }).lean();
-
-        const gain = tirage ? getGainAdmin(j, tirage, vendorConfig) : 0;
-        totalGain += gain;
-
-        jeux.push({
-          ...j,
-          gain: gain,
-          gainLabel: money(gain)
-        });
-      }
-
-      cleanTickets.push({
-        ...t,
-        id: realId,
-        ticketId: realId,
-        serial: realId,
-        jeux: jeux,
-        premio: totalGain,
-        premioLabel: money(totalGain)
-      });
-    }
-
-    res.json(cleanTickets);
-
-  } catch (err) {
-    console.error("Erreur report tickets Mongo:", err.message);
-    res.status(500).json([]);
-  }
-});
 
 
 router.post("/api/tickets/:id/anile", async (req, res) => {
@@ -3552,7 +3458,7 @@ tbody tr:nth-child(even){background:#313652;}
         </div>
         <div class="field-group">
           <div class="field-label">Balance actual</div>
-          <input id="vd_balance" class="field-input" value="0" />
+          
         </div>
       </div>
 
@@ -5071,7 +4977,17 @@ function fillVentasVendorSelect(){
   el.innerHTML = "";
   el.appendChild(makeOption("","- VENDEDOR -"));
 
-  vendors.forEach(v=>{
+ vendors
+  .slice()
+  .sort((a,b)=>
+    String(a.nombre || a.nom || a.id)
+      .localeCompare(
+        String(b.nombre || b.nom || b.id),
+        undefined,
+        { sensitivity:"base" }
+      )
+  )
+  .forEach(v=>{
     el.appendChild(makeOption(v.id, v.nombre || v.nom || v.id));
   });
 
