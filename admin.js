@@ -1206,6 +1206,7 @@ router.delete("/api/vendors/:id", async (req, res) => {
   }
 });
 
+
 router.post("/api/vendors/:id/connections/:index/block", async (req, res) => {
   try {
     const id = String(req.params.id || "").trim().toUpperCase();
@@ -1223,14 +1224,13 @@ router.post("/api/vendors/:id/connections/:index/block", async (req, res) => {
       return res.status(404).json({ ok:false, message:"Connexion introuvable" });
     }
 
-    // Bloque connexion lan sèlman
     vendor.conexiones[index].co = false;
     vendor.conexiones[index].on = false;
     vendor.conexiones[index].st = false;
     vendor.conexiones[index].last = new Date().toLocaleString("fr-FR");
 
-    // Pa bloke login vendor a
-    vendor.estatus = "Activo";
+    // BLOKE VANT
+    vendor.bloqueVente = true;
 
     vendor.markModified("conexiones");
     await vendor.save();
@@ -1243,6 +1243,8 @@ router.post("/api/vendors/:id/connections/:index/block", async (req, res) => {
   }
 });
 
+
+
 router.post("/api/vendors/:id/connections/:index/unblock", async (req, res) => {
   try {
     const id = String(req.params.id || "").trim().toUpperCase();
@@ -1251,31 +1253,31 @@ router.post("/api/vendors/:id/connections/:index/unblock", async (req, res) => {
     const vendor = await Vendor.findOne({ id });
 
     if (!vendor) {
-      return res.status(404).json({ ok: false, message: "Vendeur introuvable" });
+      return res.status(404).json({ ok:false, message:"Vendeur introuvable" });
     }
 
     if (!Array.isArray(vendor.conexiones)) vendor.conexiones = [];
 
     if (!vendor.conexiones[index]) {
-      return res.status(404).json({ ok: false, message: "Connexion introuvable" });
+      return res.status(404).json({ ok:false, message:"Connexion introuvable" });
     }
 
-    // ✅ Debloque sèlman, pa efase anyen
     vendor.conexiones[index].co = true;
     vendor.conexiones[index].on = true;
     vendor.conexiones[index].st = true;
     vendor.conexiones[index].last = new Date().toLocaleString("fr-FR");
 
-    vendor.estatus = "Activo";
-    vendor.conexion = vendor.conexiones[index].last;
+    // RETIRE BLOKAJ LA
+    vendor.bloqueVente = false;
 
     vendor.markModified("conexiones");
     await vendor.save();
 
-    res.json({ ok: true });
+    res.json({ ok:true });
+
   } catch (err) {
     console.error("Erreur déblocage connexion:", err);
-    res.status(500).json({ ok: false, message: "Erreur déblocage connexion" });
+    res.status(500).json({ ok:false, message:"Erreur déblocage connexion" });
   }
 });
 
@@ -3523,7 +3525,7 @@ tbody tr:nth-child(even){background:#313652;}
           <div class="field-label">Zona</div>
           <select id="vd_zona" class="field-select"></select>
         </div>
-        <div class="field-group">
+          <div class="field-group">
           <div class="field-label">Venta del día</div>
           <input id="vd_venta" class="field-input" value="0" />
         </div>

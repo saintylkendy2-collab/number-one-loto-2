@@ -1504,6 +1504,13 @@ if (!vendor) {
   return res.status(404).json({ ok:false, message:"Vandè pa jwenn" });
 }
 
+if (vendor.bloqueVente === true) {
+  return res.status(403).json({
+    ok: false,
+    message: "OU BLOKE"
+  });
+}
+
 const credit = Number(vendor?.config?.credito || vendor?.credito || 0);
 
 if (credit <= 0) {
@@ -2750,7 +2757,7 @@ stroke-width="2.2">
 <script>
 var sellerId = ${JSON.stringify(sellerId)};
 var sellerName = ${JSON.stringify(sellerName)};
-var sellerConfig = ${JSON.stringify(vendeur?.config || {})};
+var bloqueVente = ${JSON.stringify(vendeur.bloqueVente === true)};
 
 var activeField = "numero";
 var numero = "";
@@ -3240,6 +3247,11 @@ if(/^\\d{4}\\+$/.test(num)){
 
 
 function mergeOrPushGame(entry){
+ if(bloqueVente === true){
+   alert("OU BLOKE");
+   return;
+ }
+
  var found = jeux.find(function(j){
    return j.type === entry.type && j.numero === entry.numero && j.loterie === entry.loterie;
  });
@@ -3250,6 +3262,7 @@ function mergeOrPushGame(entry){
    jeux.push(entry);
  }
 }
+
 
 function getAutoSourceBalls(){
  var counts = {};
