@@ -5508,17 +5508,17 @@ mensajeTicket:"",
   };
 }
 
-function openNewVendor(){
+async function openNewVendor(){
   currentVendorIndex = null;
+  await goPage("editor");
   fillVendorForm(blankVendor());
-  goPage("editor");
   showVendorTab("datos");
 }
 
-function openVendorByIndex(index){
+async function openVendorByIndex(index){
   currentVendorIndex = index;
+  await goPage("editor");
   fillVendorForm(vendors[index]);
-  goPage("editor");
   showVendorTab("datos");
 }
 
