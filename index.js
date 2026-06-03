@@ -6359,10 +6359,28 @@ res.send(
 
 app.get("/api/reportes/tickets", async (req, res) => {
   try {
-    const tickets = await Ticket.find().sort({ createdAt: -1 }).lean();
+    const date = String(req.query.date || "").trim();
+
+    function isoToDMY(v){
+      const m = String(v || "").match(/^(\d{4})-(\d{2})-(\d{2})$/);
+      if(m) return m[3] + "/" + m[2] + "/" + m[1];
+      return v;
+    }
+
+    const q = {};
+    if(date){
+      q.dateLabel = isoToDMY(date);
+    }
+
+   const tickets = await Ticket.find(q)
+  .select("id ticketId serial vendeur vendeurNom createdAt createdAtLabel dateLabel timeLabel status premio total jeux.type")
+  .sort({ _id: -1 })
+  .limit(5000)
+  .lean();
+
     res.json(tickets);
   } catch (err) {
-    console.error(err);
+    console.error("Erreur /api/reportes/tickets index:", err.message);
     res.status(500).json([]);
   }
 });
