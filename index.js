@@ -591,7 +591,11 @@ app.post("/login", async (req, res) => {
         vendeur.markModified("conexiones");
         await vendeur.save();
 
-        return res.redirect("/dashboard?id=" + encodeURIComponent(id));
+        return res.send(`
+<script>
+  window.location.replace("/dashboard?id=${encodeURIComponent(id)}");
+</script>
+`);
       }
 
       return res.send(loginErrorPage("ID sa konekte deja ✖"));
@@ -604,7 +608,11 @@ app.post("/login", async (req, res) => {
     vendeur.markModified("conexiones");
     await vendeur.save();
 
-    return res.redirect("/dashboard?id=" + encodeURIComponent(id));
+    return res.send(`
+<script>
+  window.location.replace("/dashboard?id=${encodeURIComponent(id)}");
+</script>
+`);
 
   } catch (err) {
     console.error("LOGIN ERROR:", err.message);
@@ -5979,16 +5987,23 @@ function closeVendorDrawer(){
   document.getElementById("drawerOverlay").classList.remove("show");
 }
 
-// BLOKE BOUTON BACK ANDROID: li pa dwe dekonekte vandè a
+// BLOKE FLECH ANDROID SOU DASHBOARD
 (function(){
   try {
-    history.pushState({page:"dashboard"}, "", location.href);
+    history.replaceState({page:"dashboard"}, "", location.href);
+    history.pushState({page:"dashboard-lock"}, "", location.href);
 
     window.addEventListener("popstate", function(){
-      history.pushState({page:"dashboard"}, "", location.href);
+      history.pushState({page:"dashboard-lock"}, "", location.href);
 
-      if (typeof closeDrawer === "function") closeDrawer();
-      if (typeof showPage === "function") showPage("jeuxPage");
+      if (typeof closeDrawer === "function") {
+        closeDrawer();
+      }
+
+      if (typeof document.getElementById === "function") {
+        var overlay = document.getElementById("drawerOverlay");
+        if (overlay) overlay.classList.remove("show");
+      }
     });
   } catch(e) {}
 })();
