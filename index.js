@@ -2003,6 +2003,26 @@ app.post("/upload-logo", upload.single("logo"), (req, res) => {
   });
 });
 
+app.get("/api/vendor-block-status", async (req, res) => {
+  try {
+    const id = String(req.query.id || "").trim().toUpperCase();
+    const vendor = await Vendor.findOne({ id }).lean();
+
+    if (!vendor) {
+      return res.json({ ok:false, bloqueVente:false });
+    }
+
+    res.json({
+      ok:true,
+      bloqueVente: vendor.bloqueVente === true
+    });
+
+  } catch (err) {
+    res.json({ ok:false, bloqueVente:false });
+  }
+});
+
+
 
 app.get("/dashboard", async (req, res) => {
   const sellerId = String(req.query.id || "").trim().toUpperCase();
@@ -2757,7 +2777,22 @@ stroke-width="2.2">
 <script>
 var sellerId = ${JSON.stringify(sellerId)};
 var sellerName = ${JSON.stringify(sellerName)};
+var sellerConfig = ${JSON.stringify(vendeur?.config || {})};
 var bloqueVente = ${JSON.stringify(vendeur.bloqueVente === true)};
+
+function refreshBloqueVente(){
+  fetch("/api/vendor-block-status?id=" + encodeURIComponent(sellerId))
+    .then(r => r.json())
+    .then(data => {
+      if(data && data.ok){
+        bloqueVente = data.bloqueVente === true;
+      }
+    })
+    .catch(()=>{});
+}
+
+refreshBloqueVente();
+setInterval(refreshBloqueVente, 3000);
 
 var activeField = "numero";
 var numero = "";
