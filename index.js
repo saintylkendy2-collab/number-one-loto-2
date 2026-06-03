@@ -4240,64 +4240,18 @@ function validateLoteries(){
     cursorMontant = 0;
     activeField = "numero";
 
-const oldLoteries = [];
-
-(selectedTicketToCopy.jeux || []).forEach(function(j){
-
-  const montantJ = Number(j.montant || j.monto || j.amount || 0);
-
-  if(montantJ <= 0) return;
-
-  const typeJ = String(j.type || "").toUpperCase();
-
-  const isGratisMariage =
-    typeJ === "MAR" &&
-    (
-      j.gratis === true ||
-      j.free === true ||
-      montantJ === 0
-    );
-
-  if(isGratisMariage) return;
-
-  const oldLot = String(j.loterie || j.loteria || "").trim();
-
-  if(oldLot && oldLoteries.indexOf(oldLot) < 0){
-    oldLoteries.push(oldLot);
-  }
-
-});
-
-(selectedTicketToCopy.jeux || []).forEach(function(j){
-
-  const montantJ = Number(j.montant || j.monto || j.amount || 0);
-
-  if(montantJ <= 0) return;
-
-  const typeJ = String(j.type || "").toUpperCase();
-
-  const isGratisMariage =
-    typeJ === "MAR" &&
-    (
-      j.gratis === true ||
-      j.free === true ||
-      montantJ === 0
-    );
-
-  if(isGratisMariage) return;
-
-  const oldLot = String(j.loterie || j.loteria || "").trim();
-
-  const idx = oldLoteries.indexOf(oldLot);
-
-  jeux.push({
-    type: j.type,
-    numero: j.numero,
-    loterie: selectedLoteries[idx] || selectedLoteries[0] || oldLot,
-    montant: montantJ
-  });
-
-});
+(selectedTicketToCopy.jeux || [])
+.filter(j => Number(j.montant || 0) > 0)
+.forEach(function(j){
+      selectedLoteries.forEach(function(lot){
+        jeux.push({
+          type: j.type,
+          numero: j.numero,
+          loterie: lot,
+          montant: Number(j.montant || 0)
+        });
+      });
+    });
 
     copyMode = false;
     selectedTicketToCopy = null;
@@ -6109,24 +6063,9 @@ paidRows.forEach(function(g){
 
 let isTogether = false;
 
-if (loteriesOrder.length > 1) {
-  const map = {};
-
-  paidRows.forEach(function(g){
-    if (!map[g.loterie]) map[g.loterie] = [];
-    map[g.loterie].push(g.type + "|" + g.numero + "|" + g.montant);
-  });
-
-  const first = map[loteriesOrder[0]] || [];
-
-  isTogether = loteriesOrder.every(function(lot){
-    const arr = map[lot] || [];
-
-    if (arr.length !== first.length) return false;
-
-    return first.every(function(key){
-      return arr.indexOf(key) >= 0;
-    });
+if (loteriesOrder.length > 1 && paidRows.length % loteriesOrder.length === 0) {
+  isTogether = paidRows.every(function(g, i){
+    return g.loterie === loteriesOrder[i % loteriesOrder.length];
   });
 }
 
