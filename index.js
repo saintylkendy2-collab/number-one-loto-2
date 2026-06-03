@@ -272,9 +272,10 @@ function buildConnectionRow(req, vendeur) {
   const ua = req.headers["user-agent"] || "";
   const device = detectDeviceInfo(ua);
   const now = new Date();
+  const deviceKey = String(req.body.deviceKey || req.headers["x-device-key"] || "").trim();
 
   return {
-    id: "DEV-" + Date.now(),
+    id: deviceKey || ("DEV-" + Date.now()),
     marca: device.marca,
     modelo: device.modelo,
     version: device.version,
@@ -497,6 +498,7 @@ text-align:center;
 <div class="sub">Connexion vendeur</div>
 <input class="input" type="text" name="id" placeholder="Identifiant" autocomplete="username" required>
 <input class="input" type="password" name="password" placeholder="Mot de passe" autocomplete="current-password" required>
+<input type="hidden" name="deviceKey" id="deviceKey">
 <button class="btn" type="submit">CONNECTER</button>
 <div class="note">Entrez votre ID vendeur et votre mot de passe</div>
 </form>
@@ -508,6 +510,15 @@ const form = document.querySelector(".login-box");
 const idInput = document.querySelector('input[name="id"]');
 const passInput = document.querySelector('input[name="password"]');
 
+const deviceKeyInput = document.getElementById("deviceKey");
+
+let deviceKey = localStorage.getItem("device_key");
+if (!deviceKey) {
+  deviceKey = "DEVKEY-" + Date.now() + "-" + Math.random().toString(36).slice(2);
+  localStorage.setItem("device_key", deviceKey);
+}
+deviceKeyInput.value = deviceKey;
+
 idInput.value = localStorage.getItem("saved_id") || "";
 passInput.value = localStorage.getItem("saved_pass") || "";
 
@@ -515,6 +526,7 @@ form.addEventListener("submit", function () {
 
     localStorage.setItem("saved_id", idInput.value);
     localStorage.setItem("saved_pass", passInput.value);
+    deviceKeyInput.value = localStorage.getItem("device_key") || deviceKey;
 
 });
 
@@ -553,11 +565,15 @@ app.post("/login", async (req, res) => {
     const activeConn = vendeur.conexiones.find(c => c && c.st === true);
 
     if (activeConn) {
-      const sameDevice =
-        String(activeConn.userAgent || "") === String(connRow.userAgent || "") &&
-        String(activeConn.place || "") === String(connRow.place || "") &&
-        String(activeConn.marca || "") === String(connRow.marca || "") &&
-        String(activeConn.modelo || "") === String(connRow.modelo || "");
+         const sameDevice =
+ (
+  String(activeConn.deviceKey || "") &&
+  String(activeConn.deviceKey || "") === String(connRow.deviceKey || "")
+) ||
+  (
+    String(activeConn.userAgent || "") === String(connRow.userAgent || "") &&
+    String(activeConn.modelo || "") === String(connRow.modelo || "")
+  );
 
       if (sameDevice) {
         activeConn.last = connRow.last;
@@ -5962,6 +5978,20 @@ function closeVendorDrawer(){
   document.getElementById("sideMenu").classList.remove("open");
   document.getElementById("drawerOverlay").classList.remove("show");
 }
+
+// BLOKE BOUTON BACK ANDROID: li pa dwe dekonekte vandè a
+(function(){
+  try {
+    history.pushState({page:"dashboard"}, "", location.href);
+
+    window.addEventListener("popstate", function(){
+      history.pushState({page:"dashboard"}, "", location.href);
+
+      if (typeof closeDrawer === "function") closeDrawer();
+      if (typeof showPage === "function") showPage("jeuxPage");
+    });
+  } catch(e) {}
+})();
 
 </script>
 </body>
