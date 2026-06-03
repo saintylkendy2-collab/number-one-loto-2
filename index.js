@@ -504,12 +504,9 @@ text-align:center;
 </form>
 
 <script>
-
 const form = document.querySelector(".login-box");
-
 const idInput = document.querySelector('input[name="id"]');
 const passInput = document.querySelector('input[name="password"]');
-
 const deviceKeyInput = document.getElementById("deviceKey");
 
 let deviceKey = localStorage.getItem("device_key");
@@ -522,14 +519,20 @@ deviceKeyInput.value = deviceKey;
 idInput.value = localStorage.getItem("saved_id") || "";
 passInput.value = localStorage.getItem("saved_pass") || "";
 
+if (
+  localStorage.getItem("saved_id") &&
+  localStorage.getItem("saved_pass") &&
+  localStorage.getItem("manual_logout") !== "1"
+) {
+  window.location.replace("/dashboard?id=" + encodeURIComponent(localStorage.getItem("saved_id")));
+}
+
 form.addEventListener("submit", function () {
-
-    localStorage.setItem("saved_id", idInput.value);
-    localStorage.setItem("saved_pass", passInput.value);
-    deviceKeyInput.value = localStorage.getItem("device_key") || deviceKey;
-
+  localStorage.setItem("saved_id", idInput.value);
+  localStorage.setItem("saved_pass", passInput.value);
+  localStorage.removeItem("manual_logout");
+  deviceKeyInput.value = localStorage.getItem("device_key") || deviceKey;
 });
-
 </script>
 
 </body>
