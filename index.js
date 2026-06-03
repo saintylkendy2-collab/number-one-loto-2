@@ -553,15 +553,11 @@ app.post("/login", async (req, res) => {
     const activeConn = vendeur.conexiones.find(c => c && c.st === true);
 
     if (activeConn) {
-        const sameDevice =
-  (
-    String(activeConn.vinculado || "") &&
-    String(activeConn.vinculado || "") === String(connRow.vinculado || "")
-  ) ||
-  (
-    String(activeConn.userAgent || "") === String(connRow.userAgent || "") &&
-    String(activeConn.modelo || "") === String(connRow.modelo || "")
-  );
+      const sameDevice =
+        String(activeConn.userAgent || "") === String(connRow.userAgent || "") &&
+        String(activeConn.place || "") === String(connRow.place || "") &&
+        String(activeConn.marca || "") === String(connRow.marca || "") &&
+        String(activeConn.modelo || "") === String(connRow.modelo || "");
 
       if (sameDevice) {
         activeConn.last = connRow.last;
@@ -1493,7 +1489,15 @@ const totalTicket = safeJeux.reduce(
   0
 );
 
-if (credit > 0 && totalTicket > credit) {
+const balance = Number(vendor.balance || 0);
+
+if (
+  credit > 0 &&
+  (
+    totalTicket > credit ||
+    (balance + totalTicket) > credit
+  )
+) {
   return res.status(403).json({
     ok:false,
     message:"OU PA GEN KREDI"
@@ -6416,28 +6420,10 @@ res.send(
 
 app.get("/api/reportes/tickets", async (req, res) => {
   try {
-    const date = String(req.query.date || "").trim();
-
-    function isoToDMY(v){
-      const m = String(v || "").match(/^(\d{4})-(\d{2})-(\d{2})$/);
-      if(m) return m[3] + "/" + m[2] + "/" + m[1];
-      return v;
-    }
-
-    const q = {};
-    if(date){
-      q.dateLabel = isoToDMY(date);
-    }
-
-   const tickets = await Ticket.find(q)
-  .select("id ticketId serial vendeur vendeurNom createdAt createdAtLabel dateLabel timeLabel status premio total jeux.type")
-  .sort({ _id: -1 })
-  .limit(5000)
-  .lean();
-
+    const tickets = await Ticket.find().sort({ createdAt: -1 }).lean();
     res.json(tickets);
   } catch (err) {
-    console.error("Erreur /api/reportes/tickets index:", err.message);
+    console.error(err);
     res.status(500).json([]);
   }
 });
