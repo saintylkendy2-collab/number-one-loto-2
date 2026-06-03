@@ -276,6 +276,7 @@ function buildConnectionRow(req, vendeur) {
 
   return {
     id: deviceKey || ("DEV-" + Date.now()),
+    deviceKey: deviceKey,
     marca: device.marca,
     modelo: device.modelo,
     version: device.version,
@@ -291,6 +292,7 @@ function buildConnectionRow(req, vendeur) {
     st: true
   };
 }
+
 
 function normalizeStatus(status = "") {
   const s = String(status || "").trim().toUpperCase();
@@ -2711,7 +2713,7 @@ stroke-width="2.2">
 <div class="drawer-item" onclick="openDrawerParametre()">Paramètre</div>
 <div class="drawer-item" onclick="openDrawerImprimante()">Imprimante</div>
 <div class="drawer-item" onclick="openDrawerUpdate()">Update</div>
-<div class="drawer-item" onclick="window.location='/logout?id=${encodeURIComponent(sellerId)}'">Sortir</div>
+<div class="drawer-item" onclick="localStorage.setItem('manual_logout','1'); window.location='/logout?id=${encodeURIComponent(sellerId)}'">Sortir</div>
 </div>
 
 <div id="optionsSheet" class="options-sheet">
