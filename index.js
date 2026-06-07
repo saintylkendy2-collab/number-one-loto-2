@@ -4328,18 +4328,32 @@ function validateLoteries(){
     cursorMontant = 0;
     activeField = "numero";
 
+var deja = {};
+
 (selectedTicketToCopy.jeux || [])
-.filter(j => Number(j.montant || 0) > 0)
+.filter(function(j){
+  return Number(j.montant || 0) > 0;
+})
 .forEach(function(j){
-      selectedLoteries.forEach(function(lot){
-        jeux.push({
-          type: j.type,
-          numero: j.numero,
-          loterie: lot,
-          montant: Number(j.montant || 0)
-        });
-      });
+
+  var keySource =
+    String(j.type || "").trim().toUpperCase() + "|" +
+    String(j.numero || "").trim() + "|" +
+    Number(j.montant || 0);
+
+  if(deja[keySource]) return;
+  deja[keySource] = true;
+
+  selectedLoteries.forEach(function(lot){
+    jeux.push({
+      type: j.type,
+      numero: j.numero,
+      loterie: lot,
+      montant: Number(j.montant || 0)
     });
+  });
+
+});
 
     copyMode = false;
     selectedTicketToCopy = null;
