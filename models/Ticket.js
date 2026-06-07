@@ -5,6 +5,13 @@ const TicketSchema = new mongoose.Schema({
   ticketId: { type: String },
   serial: { type: String },
 
+  clientRequestId: {
+  type: String,
+  unique: true,
+  sparse: true,
+  index: true
+},
+
   vendeur: { type: String },
   vendeurNom: { type: String },
 
