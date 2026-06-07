@@ -6106,15 +6106,10 @@ app.get("/print", async (req, res) => {
       ]
     }).lean();
 
-    if (!ticket) {
-      return res.status(404).send("Ticket introuvable");
-    }
+    if (!ticket) return res.status(404).send("Ticket introuvable");
 
     let vendeur = null;
-
-    if (sellerId) {
-      vendeur = await Vendor.findOne({ id: sellerId }).lean();
-    }
+    if (sellerId) vendeur = await Vendor.findOne({ id: sellerId }).lean();
 
     const sellerName = String(
       (vendeur && (vendeur.nom || vendeur.nombre)) ||
@@ -6128,25 +6123,16 @@ app.get("/print", async (req, res) => {
     const dateStr = ticket.dateLabel || formatDateFR(new Date(ticket.createdAt || Date.now()));
     const timeStr = ticket.timeLabel || formatTimeFR(new Date(ticket.createdAt || Date.now()));
 
-    const APP_CONFIG =
-      await AppConfig.findOne({ key:"main" }).lean()
-      || {};
-
+    const APP_CONFIG = await AppConfig.findOne({ key:"main" }).lean() || {};
     const sellerConfig = (vendeur && vendeur.config) ? vendeur.config : {};
 
     const footerMessage =
-      (
-        sellerConfig.usarMensajeTicket &&
-        sellerConfig.mensajeTicket
-      )
+      (sellerConfig.usarMensajeTicket && sellerConfig.mensajeTicket)
       ? sellerConfig.mensajeTicket
       : (APP_CONFIG.ticketMessage || "");
 
     function clean(v){
-      return String(v || "")
-        .replace(/</g, "")
-        .replace(/>/g, "")
-        .replace(/&/g, "and");
+      return String(v || "").replace(/</g, "").replace(/>/g, "").replace(/&/g, "and");
     }
 
     function money(n){
@@ -6186,9 +6172,24 @@ paidRows.forEach(function(g){
 
 let isTogether = false;
 
-if (loteriesOrder.length > 1 && paidRows.length % loteriesOrder.length === 0) {
-  isTogether = paidRows.every(function(g, i){
-    return g.loterie === loteriesOrder[i % loteriesOrder.length];
+if (loteriesOrder.length > 1) {
+  const map = {};
+
+  paidRows.forEach(function(g){
+    if (!map[g.loterie]) map[g.loterie] = [];
+    map[g.loterie].push(g.type + "|" + g.numero + "|" + g.montant);
+  });
+
+  const first = map[loteriesOrder[0]] || [];
+
+  isTogether = loteriesOrder.every(function(lot){
+    const arr = map[lot] || [];
+
+    if (arr.length !== first.length) return false;
+
+    return first.every(function(key){
+      return arr.indexOf(key) >= 0;
+    });
   });
 }
 
@@ -6265,50 +6266,71 @@ if (isTogether) {
   });
 }
 
-    const freeGames = (ticket.jeux || []).filter(function(j){
-      return j.gratis === true || j.free === true;
+const freeGames = (ticket.jeux || []).filter(function(j){
+  return j.gratis === true || j.free === true;
+});
+
+let freeText = "";
+
+if (freeGames.length > 0) {
+  const freeMap = {};
+
+  freeGames.forEach(function(j){
+    let loterie = String(j.loterie || j.loteria || "").trim().toUpperCase() || "SANS TIRAGE";
+
+    if (!freeMap[loterie]) freeMap[loterie] = [];
+
+    let typeRaw = String(j.type || "").toUpperCase();
+
+    let type = typeRaw;
+    if (typeRaw === "BOR") type = "Borlette";
+    else if (typeRaw === "MAR") type = "Mariage";
+    else if (typeRaw === "L41") type = "Loto4";
+
+    freeMap[loterie].push({
+      type: type,
+      numero: String(j.numero || "").trim()
     });
+  });
 
-    let freeText = "";
+  Object.keys(freeMap).forEach(function(lot){
+    freeText += "------------------------------" + NL;
+    freeText += clean(lot) + NL;
+    freeText += "------------------------------" + NL;
 
-    freeGames.forEach(function(j){
-      let typeRaw = String(j.type || "").toUpperCase();
-
-      let type = typeRaw;
-      if (typeRaw === "BOR") type = "Borlette";
-      else if (typeRaw === "MAR") type = "Mariage";
-      else if (typeRaw === "L41") type = "Loto4";
-
-      let numero = String(j.numero || "").trim();
-
+    freeMap[lot].forEach(function(g){
       freeText += lineGame(
-        type,
-        numero,
+        g.type,
+        g.numero,
         "Gratis"
       ) + NL;
     });
+  });
+}
 
-    let text = "";
+let text = "";
 
-    text += "      NUMBER ONE LOTO 2" + NL;
-    text += "SELLER " + clean(sellerName) + NL;
-    text += "TICKET " + clean(ticket.id || ticket.ticketId || ticket.serial || ticketId) + NL;
-    text += "DATE " + clean(dateStr) + " " + clean(timeStr) + NL;
-    text += "------------------------------" + NL;
+text += "       NUMBER ONE LOTO 2" + NL;
+text += "SELLER " + clean(sellerName) + NL;
+text += "TICKET " + clean(ticket.id || ticket.ticketId || ticket.serial || ticketId) + NL;
+text += "DATE " + clean(dateStr) + " " + clean(timeStr) + NL;
+text += "------------------------------" + NL;
 
-    if (isTogether) {
+if (isTogether) {
   text += loteriesText;
   text += "------------------------------" + NL;
 }
 
 text += gamesText;
 
-    if (freeText) {
-      text += freeText;
-    }
+if (freeText) {
+  text += freeText;
+}
 
-    text += "------------------------------" + NL;
-    text += "TOTAL: " + money(total) + " G" + NL;
+
+text += "------------------------------" + NL;
+text += "TOTAL: " + money(total) + " " + NL;
+
 
     if (footerMessage) {
       text += NL;
@@ -6318,21 +6340,9 @@ text += gamesText;
     res.set("Content-Type", "text/html; charset=utf-8");
 
     res.send(
-      '<!DOCTYPE html>' +
-      '<html>' +
-      '<head>' +
-      '<meta charset="UTF-8">' +
-      '<title>Print</title>' +
-      '<style>' +
-      '@page{size:58mm auto;margin:0;}' +
-      'body{width:48mm;margin:0 auto;padding:3px;font-family:monospace;font-size:12px;color:#000;}' +
-      'pre{white-space:pre-wrap;margin:0;font-family:monospace;font-size:12px;}' +
-      '</style>' +
-      '</head>' +
-      '<body>' +
-      '<pre>' + clean(text) + '</pre>' +
-      '</body>' +
-      '</html>'
+      '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Print</title>' +
+      '<style>@page{size:58mm auto;margin:0;}body{width:48mm;margin:0 auto;padding:3px;font-family:monospace;font-size:12px;color:#000;}pre{white-space:pre-wrap;margin:0;font-family:monospace;font-size:12px;}</style>' +
+      '</head><body><pre>' + clean(text) + '</pre></body></html>'
     );
 
   } catch (err) {
@@ -6340,7 +6350,6 @@ text += gamesText;
     res.status(500).send("Erreur impression");
   }
 });
-
 
 app.get("/print-report", async (req, res) => {
   try {
