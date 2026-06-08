@@ -1382,18 +1382,6 @@ app.post("/api/tickets", async (req, res) => {
     const jeux = Array.isArray(req.body.jeux) ? req.body.jeux : [];
     const channel = String(req.body.channel || "MANUEL").trim().toUpperCase();
 
-    const clientRequestId = String(req.body.clientRequestId || "").trim();
-
-if(clientRequestId){
-  const oldTicket = await Ticket.findOne({ clientRequestId }).lean();
-  if(oldTicket){
-    return res.json({
-      ok: true,
-      ticket: oldTicket
-    });
-  }
-}
-
     const clientCreatedAt = String(req.body.clientCreatedAt || "");
     const clientDateLabel = String(req.body.clientDateLabel || "");
     const clientTimeLabel = String(req.body.clientTimeLabel || "");
@@ -1417,18 +1405,53 @@ if(clientRequestId){
       return res.status(400).json({ ok: false, message: "Jwèt yo pa valid" });
     }
 
-for (const j of safeJeux) {
-  const limites = limitesAjustes || {};
-  const type = normGameType(j.type);
+const limites = limitesAjustes || {};
+const bloques = Array.isArray(limites.bloqueoNumeros)
+  ? limites.bloqueoNumeros
+  : [];
 
-  const bloques = Array.isArray(limites.bloqueoNumeros)
-    ? limites.bloqueoNumeros
-    : [];
+const todayLabel = clientDateLabel || new Date().toLocaleDateString("fr-FR");
+
+const lotNamesLimit = [...new Set(
+  safeJeux.map(j => String(j.loterie || "").trim().toUpperCase())
+)];
+
+const numNamesLimit = [...new Set(
+  safeJeux.map(j => String(j.numero || "").trim())
+)];
+
+const oldTicketsLimit = await Ticket.find({
+  status: { $ne: "ANILE" },
+  dateLabel: todayLabel,
+  "jeux.loterie": { $in: lotNamesLimit },
+  "jeux.numero": { $in: numNamesLimit }
+}).select("jeux").lean();
+
+const dejaMap = {};
+
+oldTicketsLimit.forEach(t => {
+  (t.jeux || []).forEach(old => {
+    const typeOld = normGameType(old.type);
+    const numOld = String(old.numero || "").trim();
+    const lotOld = String(old.loterie || "").trim().toUpperCase();
+
+    const key = typeOld + "|" + numOld + "|" + lotOld;
+
+    dejaMap[key] = (dejaMap[key] || 0) + Number(old.montant || 0);
+  });
+});
+
+const currentMap = {};
+
+for (const j of safeJeux) {
+  const type = normGameType(j.type);
+  const num = String(j.numero || "").trim();
+  const lot = String(j.loterie || "").trim().toUpperCase();
 
   const blocked = bloques.some(b => {
-    if (typeof b === "string") return b.trim() === j.numero;
+    if (typeof b === "string") return b.trim() === num;
 
-    return String(b.numero || "").trim() === j.numero &&
+    return String(b.numero || "").trim() === num &&
       (!b.type || normGameType(b.type) === type);
   });
 
@@ -1436,10 +1459,10 @@ for (const j of safeJeux) {
     return res.status(403).json({
       ok:false,
       message:
-  "❌ " + loterie + "\n" +
-  type + " " + numero + "\n\n" +
-  "Nimewo sa bloke.\n" +
-  "Ou pa ka vann jwèt sa."
+        "❌ " + lot + "\n" +
+        type + " " + num + "\n\n" +
+        "Nimewo sa bloke.\n" +
+        "Ou pa ka vann jwèt sa."
     });
   }
 
@@ -1451,61 +1474,47 @@ for (const j of safeJeux) {
   else if (type === "L41" || type === "L42" || type === "L43") limit = Number(limites.loto4 || 0);
   else if (type === "L51" || type === "L52" || type === "L53") limit = Number(limites.loto5 || 0);
 
-const special = (limites.limiteNumeros || []).find(x =>
-  normGameType(x.type) === type &&
-  String(x.numero || "").trim() === String(j.numero || "").trim()
-);
+  const special = (limites.limiteNumeros || []).find(x =>
+    normGameType(x.type) === type &&
+    String(x.numero || "").trim() === num
+  );
 
-if (special) {
-  limit = Number(special.monto || special.montant || special.limit || special.limite || 0);
-}
+  if (special) {
+    limit = Number(special.monto || special.montant || special.limit || special.limite || 0);
+  }
 
   if (limit > 0) {
-  const tickets = await Ticket.find({
-  status: { $ne: "ANILE" },
-  dateLabel: new Date().toLocaleDateString("fr-FR"),
-  "jeux.numero": String(j.numero || "").trim(),
-  "jeux.loterie": String(j.loterie || "").trim().toUpperCase()
-}).lean(); 
+    const key = type + "|" + num + "|" + lot;
 
-    let dejaVendu = 0;
+    currentMap[key] = (currentMap[key] || 0) + Number(j.montant || 0);
 
-    tickets.forEach(t => {
-      (t.jeux || []).forEach(old => {
-        if (
-          normGameType(old.type) === type &&
-          String(old.numero || "").trim() === String(j.numero || "").trim() &&
-          String(old.loterie || "").trim().toUpperCase() === String(j.loterie || "").trim().toUpperCase()
-        ) {
-          dejaVendu += Number(old.montant || 0);
-        }
-      });
-    });
-
+    const dejaVendu = Number(dejaMap[key] || 0);
     const reste = limit - dejaVendu;
 
-
-  if (reste <= 0) {
-      return res.json({ ok:false, message:
- "❌ " + j.loterie + "\n" +
-type + " " + j.numero + "\n\n" +
-  "Limit: " + limit.toFixed(2) + "\n" +
-  "Deja vann: " + dejaVendu.toFixed(2) + "\n" +
-  "Rès disponib: 0.00\n\n" +
-  "Limit nimewo sa fini."});
-    }
-
-    if (Number(j.montant || 0) > reste) {
+    if (reste <= 0) {
       return res.json({
         ok:false,
         message:
- "❌ " + j.loterie + "\n" +
-type + " " + j.numero + "\n\n" +
-  "Limit: " + limit.toFixed(2) + "\n" +
-  "Deja vann: " + dejaVendu.toFixed(2) + "\n" +
-  "Rès disponib: " + reste.toFixed(2) + "\n\n" +
-  "Ou te mande: " + Number(j.montant || 0).toFixed(2) + "\n" +
-  "Ou ka vann sèlman: " + reste.toFixed(2)
+          "❌ " + lot + "\n" +
+          type + " " + num + "\n\n" +
+          "Limit: " + limit.toFixed(2) + "\n" +
+          "Deja vann: " + dejaVendu.toFixed(2) + "\n" +
+          "Rès disponib: 0.00\n\n" +
+          "Limit nimewo sa fini."
+      });
+    }
+
+    if (currentMap[key] > reste) {
+      return res.json({
+        ok:false,
+        message:
+          "❌ " + lot + "\n" +
+          type + " " + num + "\n\n" +
+          "Limit: " + limit.toFixed(2) + "\n" +
+          "Deja vann: " + dejaVendu.toFixed(2) + "\n" +
+          "Rès disponib: " + reste.toFixed(2) + "\n\n" +
+          "Ou te mande: " + currentMap[key].toFixed(2) + "\n" +
+          "Ou ka vann sèlman: " + reste.toFixed(2)
       });
     }
   }
@@ -1720,7 +1729,6 @@ const finalJeux = jeux
       id: ticketId,
       ticketId: ticketId,
       serial: ticketId,
-      clientRequestId,
 
       vendeur: sellerId,
       vendeurNom: sellerName,
@@ -3812,9 +3820,6 @@ return code + "\\n" + lines.join("\\n") + "\\n" + code;
 }
 
 
-let sendingTicket = false;
-let currentTicketRequestId = "";
-
 function resetAfterSend(){
  jeux = [];
  numero = "";
@@ -3827,9 +3832,6 @@ function resetAfterSend(){
 
  renderJeux();
  updateFields();
-
- currentTicketRequestId = "";
-sendingTicket = false;
 }
 
 function saveCurrentTicket(channel){
@@ -3838,45 +3840,31 @@ function saveCurrentTicket(channel){
    return Promise.resolve(null);
  }
 
- if(sendingTicket){
-   return Promise.resolve(null);
- }
-
- sendingTicket = true;
-
- if(!currentTicketRequestId){
-   currentTicketRequestId =
-     sellerId + "-" + Date.now() + "-" + Math.random().toString(36).slice(2);
- }
-
  return fetch("/api/tickets", {
    method: "POST",
    headers: { "Content-Type": "application/json" },
    body: JSON.stringify({
-     sellerId: sellerId,
-     sellerName: sellerName,
-     jeux: buildPayloadGames(),
-     channel: channel || "MANUEL",
-     clientRequestId: currentTicketRequestId,
-     clientCreatedAt: new Date().toISOString(),
-     clientDateLabel: new Date().toLocaleDateString("fr-FR"),
-     clientTimeLabel: new Date().toLocaleTimeString("fr-FR", {
-       hour: "2-digit",
-       minute: "2-digit",
-       second: "2-digit"
-     })
-   })
+  sellerId: sellerId,
+  sellerName: sellerName,
+  jeux: buildPayloadGames(),
+  channel: channel || "MANUEL",
+  clientCreatedAt: new Date().toISOString(),
+  clientDateLabel: new Date().toLocaleDateString("fr-FR"),
+  clientTimeLabel: new Date().toLocaleTimeString("fr-FR", {
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit"
+  })
+})
  }).then(function(res){
    return res.json();
  }).then(function(data){
    if(!data.ok){
-     sendingTicket = false;
      alert(data.message || "Erreur save ticket");
      return null;
    }
    return data.ticket;
  }).catch(function(){
-   sendingTicket = false;
    alert("Erreur save ticket");
    return null;
  });
@@ -3894,6 +3882,7 @@ function submitPrint(){
   }
 
   submittingPrint = true;
+showTicketLoading();
 
   saveCurrentTicket("PRINT").then(function(ticket){
     if(!ticket || !ticket.id){
@@ -3934,6 +3923,7 @@ function submitPrint(){
       .finally(function(){
         setTimeout(function(){
           submittingPrint = false;
+           hideTicketLoading();
         }, 1500);
       });
 
@@ -6119,7 +6109,36 @@ function closeVendorDrawer(){
   } catch(e) {}
 })();
 
+function showTicketLoading(){
+  var box = document.getElementById("loadingTicket");
+  if(box) box.style.display = "flex";
+}
+
+function hideTicketLoading(){
+  var box = document.getElementById("loadingTicket");
+  if(box) box.style.display = "none";
+}
+
 </script>
+
+<div id="loadingTicket" style="
+  display:none;
+  position:fixed;
+  top:0; left:0;
+  width:100%; height:100%;
+  background:rgba(0,0,0,0.55);
+  z-index:99999;
+  align-items:center;
+  justify-content:center;
+  font-size:34px;
+  font-weight:bold;
+  color:white;
+  text-align:center;
+">
+  TANPRI TANN...<br>
+  TIKÈ A AP FÈT
+</div>
+
 </body>
 </html>
 `);
