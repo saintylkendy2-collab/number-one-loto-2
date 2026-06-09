@@ -3838,6 +3838,7 @@ return code + "\\n" + lines.join("\\n") + "\\n" + code;
 
 }
 
+let currentTicketRequestId = null;
 
 function resetAfterSend(){
  jeux = [];
@@ -3916,6 +3917,8 @@ showTicketLoading();
   saveCurrentTicket("PRINT").then(function(ticket){
     if(!ticket || !ticket.id){
       submittingPrint = false;
+      
+
 
       if(ticket && ticket.message){
         alert(ticket.message);
@@ -3952,12 +3955,13 @@ showTicketLoading();
       .finally(function(){
         setTimeout(function(){
           submittingPrint = false;
-           hideTicketLoading();
+          hideTicketLoading();
         }, 1500);
       });
 
   }).catch(function(err){
     submittingPrint = false;
+    
     console.error(err);
     alert("Erreur impression");
   });
