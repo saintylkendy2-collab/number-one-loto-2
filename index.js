@@ -6119,6 +6119,22 @@ function hideTicketLoading(){
   if(box) box.style.display = "none";
 }
 
+function cancelTicketLoading(){
+  hideTicketLoading();
+
+  submittingPrint = false;
+
+  if(typeof sendingTicket !== "undefined"){
+    sendingTicket = false;
+  }
+
+  if(typeof ticketBusy !== "undefined"){
+    ticketBusy = false;
+  }
+
+  alert("Verifye nan Billets avan ou peze ankò.");
+}
+
 </script>
 
 <div id="loadingTicket" style="
@@ -6135,8 +6151,25 @@ function hideTicketLoading(){
   color:white;
   text-align:center;
 ">
+
   TANPRI TANN...<br>
   TIKÈ A AP FÈT
+
+  <br><br>
+
+  <button onclick="cancelTicketLoading()" style="
+    font-size:22px;
+    font-weight:bold;
+    padding:10px 25px;
+    border:none;
+    border-radius:8px;
+    background:#ff9800;
+    color:white;
+    box-shadow:0 2px 6px rgba(0,0,0,0.3);
+  ">
+    FÈMEN
+  </button>
+
 </div>
 
 </body>
