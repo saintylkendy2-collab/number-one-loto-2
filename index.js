@@ -1374,220 +1374,6 @@ function buildFreeMariagesForTicket(tirages, jeux, appConfig, vendor){
 }
 
 
-function buildTicketPrintText({ ticket, vendeur, sellerId, appConfig }) {
-  const NL = String.fromCharCode(10);
-
-  const sellerName = String(
-    (vendeur && (vendeur.nom || vendeur.nombre)) ||
-    ticket.vendeurNom ||
-    ticket.vendeur ||
-    sellerId ||
-    "VENDEUR"
-  );
-
-  const total = Number(ticket.total || 0);
-  const dateStr = ticket.dateLabel || formatDateFR(new Date(ticket.createdAt || Date.now()));
-  const timeStr = ticket.timeLabel || formatTimeFR(new Date(ticket.createdAt || Date.now()));
-
-  const sellerConfig = (vendeur && vendeur.config) ? vendeur.config : {};
-  const footerMessage =
-    (sellerConfig.usarMensajeTicket && sellerConfig.mensajeTicket)
-      ? sellerConfig.mensajeTicket
-      : ((appConfig && appConfig.ticketMessage) || "");
-
-  function clean(v){
-    return String(v || "").replace(/</g, "").replace(/>/g, "").replace(/&/g, "and");
-  }
-
-  function money(n){
-    return Number(n || 0).toFixed(2);
-  }
-
-  function lineGame(type, numero, montant){
-    var left = String(type || "").padEnd(11, " ");
-    var mid = String(numero || "").padStart(8, " ");
-    var right = String(montant || "").padStart(10, " ");
-    return left + mid + right;
-  }
-
-  const paidRows = [];
-
-  (ticket.jeux || []).forEach(function(j){
-    if (j.gratis === true || j.free === true) return;
-
-    let typeRaw = String(j.type || "").toUpperCase();
-    let numero = String(j.numero || "").trim();
-    let montant = Number(j.montant || 0);
-    let loterie = String(j.loterie || j.loteria || "").trim().toUpperCase() || "SANS TIRAGE";
-
-    let type = typeRaw;
-    if (typeRaw === "BOR") type = "Borlette";
-    else if (typeRaw === "MAR") type = "Mariage";
-    else if (typeRaw === "L41") type = "Loto4";
-
-    paidRows.push({ loterie, type, numero, montant });
-  });
-
-  const loteriesOrder = [];
-  paidRows.forEach(function(g){
-    if (!loteriesOrder.includes(g.loterie)) loteriesOrder.push(g.loterie);
-  });
-
-  let isTogether = false;
-
-  if (loteriesOrder.length > 1) {
-    const map = {};
-
-    paidRows.forEach(function(g){
-      if (!map[g.loterie]) map[g.loterie] = [];
-      map[g.loterie].push(g.type + "|" + g.numero + "|" + g.montant);
-    });
-
-    const first = map[loteriesOrder[0]] || [];
-
-    isTogether = loteriesOrder.every(function(lot){
-      const arr = map[lot] || [];
-      if (arr.length !== first.length) return false;
-
-      return first.every(function(key){
-        return arr.indexOf(key) >= 0;
-      });
-    });
-  }
-
-  let loteriesText = "";
-  let gamesText = "";
-
-  if (isTogether) {
-    loteriesOrder.forEach(function(lot){
-      loteriesText += clean(lot) + NL;
-    });
-
-    const gameMap = {};
-
-    paidRows.forEach(function(g){
-      let key = g.type + "|" + g.numero + "|" + g.montant;
-
-      if (!gameMap[key]) {
-        gameMap[key] = {
-          type: g.type,
-          numero: g.numero,
-          montant: g.montant
-        };
-      }
-    });
-
-    Object.values(gameMap).forEach(function(g){
-      gamesText += lineGame(g.type, g.numero, money(g.montant)) + NL;
-    });
-
-  } else {
-    const lotMap = {};
-
-    paidRows.forEach(function(g){
-      if (!lotMap[g.loterie]) lotMap[g.loterie] = [];
-      lotMap[g.loterie].push(g);
-    });
-
-    Object.keys(lotMap).forEach(function(lot, index){
-      if (index > 0) {
-        gamesText += "------------------------------" + NL;
-      }
-
-      gamesText += clean(lot) + NL;
-      gamesText += "------------------------------" + NL;
-
-      const gameMap = {};
-
-      lotMap[lot].forEach(function(g){
-        let key = g.type + "|" + g.numero + "|" + g.montant;
-
-        if (!gameMap[key]) {
-          gameMap[key] = {
-            type: g.type,
-            numero: g.numero,
-            montant: g.montant,
-            count: 0
-          };
-        }
-
-        gameMap[key].count++;
-      });
-
-      Object.values(gameMap).forEach(function(g){
-        gamesText += lineGame(g.type, g.numero, money(g.montant * g.count)) + NL;
-      });
-    });
-  }
-
-  const freeGames = (ticket.jeux || []).filter(function(j){
-    return j.gratis === true || j.free === true;
-  });
-
-  let freeText = "";
-
-  if (freeGames.length > 0) {
-    const freeMap = {};
-
-    freeGames.forEach(function(j){
-      let loterie = String(j.loterie || j.loteria || "").trim().toUpperCase() || "SANS TIRAGE";
-
-      if (!freeMap[loterie]) freeMap[loterie] = [];
-
-      let typeRaw = String(j.type || "").toUpperCase();
-      let type = typeRaw;
-
-      if (typeRaw === "BOR") type = "Borlette";
-      else if (typeRaw === "MAR") type = "Mariage";
-      else if (typeRaw === "L41") type = "Loto4";
-
-      freeMap[loterie].push({
-        type: type,
-        numero: String(j.numero || "").trim()
-      });
-    });
-
-    Object.keys(freeMap).forEach(function(lot){
-      freeText += "------------------------------" + NL;
-      freeText += clean(lot) + NL;
-      freeText += "------------------------------" + NL;
-
-      freeMap[lot].forEach(function(g){
-        freeText += lineGame(g.type, g.numero, "Gratis") + NL;
-      });
-    });
-  }
-
-  let text = "";
-
-  text += "       NUMBER ONE LOTO" + NL;
-  text += "SELLER " + clean(sellerName) + NL;
-  text += "TICKET " + clean(ticket.id || ticket.ticketId || ticket.serial || "") + NL;
-  text += "DATE " + clean(dateStr) + " " + clean(timeStr) + NL;
-  text += "------------------------------" + NL;
-
-  if (isTogether) {
-    text += loteriesText;
-    text += "------------------------------" + NL;
-  }
-
-  text += gamesText;
-
-  if (freeText) {
-    text += freeText;
-  }
-
-  text += "------------------------------" + NL;
-  text += "TOTAL: " + money(total) + " G" + NL;
-
-  if (footerMessage) {
-    text += NL;
-    text += clean(footerMessage) + NL;
-  }
-
-  return text;
-}
-
 app.post("/api/tickets", async (req, res) => {
   try {
     const sellerId = String(req.body.sellerId || "").trim().toUpperCase();
@@ -1972,29 +1758,15 @@ const finalJeux = jeux
 
     const obj = ticket.toObject();
 
-  let printText = "";
-
-try {
-  printText = buildTicketPrintText({
-    ticket: obj,
-    vendeur: vendor,
-    sellerId: sellerId,
-    appConfig: appConfig
-  });
-} catch(e) {
-  console.error("PRINT TEXT BUILD ERROR:", e);
-}
-
-return res.json({
-  ok: true,
-  ticket: {
-    ...obj,
-    id: ticketId,
-    ticketId: ticketId,
-    serial: ticketId,
-    printText: printText
-  }
-});
+    return res.json({
+      ok: true,
+      ticket: {
+        ...obj,
+        id: ticketId,
+        ticketId: ticketId,
+        serial: ticketId
+      }
+    });
 
   } catch (err) {
     console.error("❌ SAVE TICKET ERROR:", err);
@@ -4110,29 +3882,15 @@ function submitPrint(){
   }
 
   submittingPrint = true;
-  showTicketLoading();
+showTicketLoading();
 
   saveCurrentTicket("PRINT").then(function(ticket){
     if(!ticket || !ticket.id){
       submittingPrint = false;
-      hideTicketLoading();
-      return;
-    }
 
-    if(ticket.printText){
-      if(window.AndroidPrinter && typeof AndroidPrinter.printTicket === "function"){
-        AndroidPrinter.printTicket(ticket.printText);
-      }else{
-        alert("Printer Android pa disponible");
+      if(ticket && ticket.message){
+        alert(ticket.message);
       }
-
-      loadBillets();
-      resetAfterSend();
-
-      setTimeout(function(){
-        submittingPrint = false;
-        hideTicketLoading();
-      }, 1500);
 
       return;
     }
@@ -4142,7 +3900,9 @@ function submitPrint(){
       "&sellerId=" + encodeURIComponent(sellerId);
 
     fetch(printUrl)
-      .then(function(r){ return r.text(); })
+      .then(function(r){
+        return r.text();
+      })
       .then(function(html){
         var doc = new DOMParser().parseFromString(html, "text/html");
         var text = doc.body.innerText.trim();
@@ -4163,18 +3923,16 @@ function submitPrint(){
       .finally(function(){
         setTimeout(function(){
           submittingPrint = false;
-          hideTicketLoading();
+           hideTicketLoading();
         }, 1500);
       });
 
   }).catch(function(err){
     submittingPrint = false;
-    hideTicketLoading();
     console.error(err);
     alert("Erreur impression");
   });
 }
-
 
 let submittingWhatsApp = false;
 
