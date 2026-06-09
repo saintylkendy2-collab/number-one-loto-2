@@ -1386,6 +1386,23 @@ app.post("/api/tickets", async (req, res) => {
     const clientDateLabel = String(req.body.clientDateLabel || "");
     const clientTimeLabel = String(req.body.clientTimeLabel || "");
 
+    const clientRequestId = String(req.body.clientRequestId || "").trim();
+
+if (clientRequestId) {
+  const oldTicket = await Ticket.findOne({
+    clientRequestId: clientRequestId,
+    vendeur: sellerId
+  }).lean();
+
+  if (oldTicket) {
+    return res.json({
+      ok: true,
+      duplicate: true,
+      ticket: oldTicket
+    });
+  }
+}
+
     if (!sellerId) {
       return res.status(400).json({ ok: false, message: "sellerId obligatoire" });
     }
@@ -1729,6 +1746,8 @@ const finalJeux = jeux
       id: ticketId,
       ticketId: ticketId,
       serial: ticketId,
+
+      clientRequestId: clientRequestId || undefined,
 
       vendeur: sellerId,
       vendeurNom: sellerName,
@@ -3828,6 +3847,8 @@ function resetAfterSend(){
  cursorMontant = 0;
  selectedLoteries = [];
 
+ currentTicketRequestId = null;
+
  activeField = "numero";
 
  renderJeux();
@@ -3840,6 +3861,11 @@ function saveCurrentTicket(channel){
    return Promise.resolve(null);
  }
 
+ if(!currentTicketRequestId){
+  currentTicketRequestId =
+    sellerId + "-" + Date.now() + "-" + Math.random().toString(36).slice(2);
+}
+
  return fetch("/api/tickets", {
    method: "POST",
    headers: { "Content-Type": "application/json" },
@@ -3848,6 +3874,9 @@ function saveCurrentTicket(channel){
   sellerName: sellerName,
   jeux: buildPayloadGames(),
   channel: channel || "MANUEL",
+
+clientRequestId: currentTicketRequestId,
+
   clientCreatedAt: new Date().toISOString(),
   clientDateLabel: new Date().toLocaleDateString("fr-FR"),
   clientTimeLabel: new Date().toLocaleTimeString("fr-FR", {
