@@ -3068,11 +3068,22 @@ function press(val){
 
    numero = numero.slice(0, cursorNumero) + val + numero.slice(cursorNumero);
    cursorNumero += val.length;
- }else if(activeField === "montant"){
-   if(!/[0-9.]/.test(val)) return;
-   montant = montant.slice(0, cursorMontant) + val + montant.slice(cursorMontant);
-   cursorMontant += val.length;
- }
+  }else if(activeField === "montant"){
+  if(!/[0-9.]/.test(val)) return;
+
+  var montantKey = numero + "|" + selectedLoteries.join(",") + "|" + jeux.length;
+
+  if(montant.length > 0 && cursorMontant === montant.length && press._montantKey !== montantKey){
+    montant = "";
+    cursorMontant = 0;
+
+  }
+
+  press._montantKey = montantKey;
+
+  montant = montant.slice(0, cursorMontant) + val + montant.slice(cursorMontant);
+  cursorMontant += val.length;
+}
 
  updateFields();
 }
@@ -3686,6 +3697,11 @@ function renderJeux(){
    var title = document.createElement("div");
    title.className = "group-title";
    title.textContent = name;
+
+title.onclick = function(){
+  openGroupMenu(name);
+};
+
    area.appendChild(title);
 
    grouped[name].forEach(function(j){
@@ -3713,6 +3729,120 @@ function renderJeux(){
  document.getElementById("ticketCount").textContent = String(jeux.length);
  document.getElementById("ticketTotal").textContent = total.toFixed(2);
 }
+
+
+function openGroupMenu(loterieName){
+  var old = document.getElementById("groupMenuOverlay");
+  if(old) old.remove();
+
+  var overlay = document.createElement("div");
+  overlay.id = "groupMenuOverlay";
+  overlay.style.position = "fixed";
+  overlay.style.left = "0";
+  overlay.style.top = "0";
+  overlay.style.right = "0";
+  overlay.style.bottom = "0";
+  overlay.style.background = "rgba(0,0,0,0.35)";
+  overlay.style.zIndex = "999999";
+  overlay.onclick = function(){
+    overlay.remove();
+  };
+
+  var box = document.createElement("div");
+  box.style.position = "absolute";
+  box.style.left = "50%";
+  box.style.top = "45%";
+  box.style.transform = "translate(-50%,-50%)";
+  box.style.background = "#fff";
+  box.style.borderRadius = "8px";
+  box.style.width = "300px";
+  box.style.boxShadow = "0 4px 15px rgba(0,0,0,.3)";
+  box.style.overflow = "hidden";
+  box.onclick = function(e){ e.stopPropagation(); };
+
+  box.innerHTML =
+    '<div onclick="modifierMontantsLoterie(\\''+loterieName+'\\')" style="padding:16px;font-size:18px;border-bottom:1px solid #ddd;">💲 Modifier les montants</div>' +
+    '<div onclick="modifierLoterieGroup(\\''+loterieName+'\\')" style="padding:16px;font-size:18px;border-bottom:1px solid #ddd;">🎚 Modifier la loterie</div>' +
+    '<div onclick="supprimerLoterieGroup(\\''+loterieName+'\\')" style="padding:16px;font-size:18px;">✕ Supprimer la loterie</div>';
+
+  overlay.appendChild(box);
+  document.body.appendChild(overlay);
+}
+
+function closeGroupMenu(){
+  var old = document.getElementById("groupMenuOverlay");
+  if(old) old.remove();
+}
+
+function modifierMontantsLoterie(loterieName){
+  closeGroupMenu();
+
+  var newAmount = prompt("Montant");
+  if(newAmount === null || newAmount.trim() === "") return;
+
+  jeux.forEach(function(j){
+    if(j.loterie === loterieName){
+      j.montant = parseFloat(newAmount) || 0;
+    }
+  });
+
+  renderJeux();
+  updateFields();
+}
+
+function modifierLoterieGroup(loterieName){
+  closeGroupMenu();
+
+  var oldValidateLoteries = validateLoteries;
+  var anciensJeux = jeux.filter(function(j){
+    return j.loterie === loterieName;
+  });
+
+  selectedLoteries = [loterieName];
+  activeField = "loterie";
+
+  validateLoteries = function(){
+    oldValidateLoteries();
+
+    if(selectedLoteries.length > 0 && anciensJeux.length > 0){
+      jeux = jeux.filter(function(j){
+        return j.loterie !== loterieName;
+      });
+
+      anciensJeux.forEach(function(oldGame){
+        selectedLoteries.forEach(function(newLot){
+          jeux.push({
+            type: oldGame.type,
+            numero: oldGame.numero,
+            loterie: newLot,
+            montant: oldGame.montant
+          });
+        });
+      });
+
+      renderJeux();
+      updateFields();
+    }
+
+    validateLoteries = oldValidateLoteries;
+  };
+
+  openLoterieModal();
+}
+
+function supprimerLoterieGroup(loterieName){
+  closeGroupMenu();
+
+  if(confirm("Éliminer les jeux de cette loterie ?")){
+    jeux = jeux.filter(function(j){
+      return j.loterie !== loterieName;
+    });
+
+    renderJeux();
+    updateFields();
+  }
+}
+
 
 function buildPayloadGames(){
  return jeux.map(function(j){
@@ -4553,14 +4683,17 @@ function renderRapports(){
     byDay[dayKey].prime += premio;
 
     (t.jeux || []).forEach(function(j){
-      var lot = String(j.loterie || "").trim() || "SANS TIRAGE";
-      var amt = Number(j.montant || 0);
+  var lot = String(j.loterie || "").trim() || "SANS TIRAGE";
+  var amt = Number(j.montant || 0);
+  var gain = st === "GANYE" ? Number(j.gain || 0) : 0;
 
-      if(!byLoterie[lot]){
-        byLoterie[lot] = { vente: 0, prime: 0 };
-      }
-      byLoterie[lot].vente += amt;
-    });
+  if(!byLoterie[lot]){
+    byLoterie[lot] = { vente: 0, prime: 0 };
+  }
+
+  byLoterie[lot].vente += amt;
+  byLoterie[lot].prime += gain;
+});
   });
 
 var commission = vente * (Number(sellerCommissionRate || 0) / 100);
@@ -5639,6 +5772,115 @@ function testPrinter(){
       renderBillets();
     };
   };
+})();
+
+
+/* ===== FILTRE BIYÈ PA STATUS: GANYAN / PÈDI / AN ATAN ===== */
+(function(){
+  var oldRenderBilletsStatus = renderBillets;
+  var billetsStatusFilter = "";
+
+  function ticketMatchStatus(t){
+    var s = String(t.status || "").toUpperCase().trim();
+
+    if(!billetsStatusFilter) return true;
+
+    if(billetsStatusFilter === "GANYE"){
+      return s === "GANYE";
+    }
+
+    if(billetsStatusFilter === "PEDI"){
+      return s === "PEDI";
+    }
+
+    if(billetsStatusFilter === "ANATAN"){
+      return s !== "GANYE" && s !== "PEDI" && s !== "ANILE";
+    }
+
+    return true;
+  }
+
+  renderBillets = function(){
+    var allTickets = savedTickets.slice();
+
+    savedTickets = allTickets.filter(function(t){
+      return ticketMatchStatus(t);
+    });
+
+    oldRenderBilletsStatus();
+
+    savedTickets = allTickets;
+
+    var wrap = document.getElementById("billetsWrap");
+    if(!wrap) return;
+
+    var bar = document.createElement("div");
+    bar.style.cssText = "background:#efeff4;padding:0 4px 8px;";
+
+    var label = "TOUT BIYÈ";
+    if(billetsStatusFilter === "GANYE") label = "BIYÈ GANYAN";
+    if(billetsStatusFilter === "PEDI") label = "BIYÈ PÈDI";
+    if(billetsStatusFilter === "ANATAN") label = "BIYÈ AN ATAN";
+
+    bar.innerHTML =
+      '<button id="billetsStatusBtn" style="width:100%;height:42px;border:1px solid #ddd;border-radius:12px;background:#fff;font-size:17px;font-weight:900;">' +
+      label +
+      '</button>';
+
+    wrap.insertBefore(bar, wrap.firstChild);
+
+    document.getElementById("billetsStatusBtn").onclick = function(){
+      openBilletsStatusMenu();
+    };
+  };
+
+ window.openBilletsStatusMenu = function(){
+  var old = document.getElementById("billetsStatusOverlay");
+  if(old) old.remove();
+
+  var overlay = document.createElement("div");
+  overlay.id = "billetsStatusOverlay";
+  overlay.style.position = "fixed";
+  overlay.style.left = "0";
+  overlay.style.top = "0";
+  overlay.style.right = "0";
+  overlay.style.bottom = "0";
+  overlay.style.background = "rgba(0,0,0,0.35)";
+  overlay.style.zIndex = "999999";
+  overlay.onclick = function(){
+    overlay.remove();
+  };
+
+  var box = document.createElement("div");
+  box.style.position = "absolute";
+  box.style.left = "50%";
+  box.style.top = "42%";
+  box.style.transform = "translate(-50%,-50%)";
+  box.style.background = "#fff";
+  box.style.borderRadius = "8px";
+  box.style.width = "310px";
+  box.style.boxShadow = "0 4px 15px rgba(0,0,0,.3)";
+  box.style.overflow = "hidden";
+  box.onclick = function(e){ e.stopPropagation(); };
+
+  box.innerHTML =
+    '<div onclick="setBilletsStatusFilter(\\'GANYE\\')" style="padding:16px;font-size:18px;border-bottom:1px solid #ddd;">🏆 BIYÈ GANYAN</div>' +
+    '<div onclick="setBilletsStatusFilter(\\'PEDI\\')" style="padding:16px;font-size:18px;border-bottom:1px solid #ddd;">❌ BIYÈ PÈDI</div>' +
+    '<div onclick="setBilletsStatusFilter(\\'ANATAN\\')" style="padding:16px;font-size:18px;border-bottom:1px solid #ddd;">⏳ BIYÈ AN ATAN</div>' +
+    '<div onclick="setBilletsStatusFilter(\\'\\')" style="padding:16px;font-size:18px;">📋 TOUT BIYÈ</div>';
+
+  overlay.appendChild(box);
+  document.body.appendChild(overlay);
+};
+
+window.setBilletsStatusFilter = function(status){
+  billetsStatusFilter = status;
+
+  var old = document.getElementById("billetsStatusOverlay");
+  if(old) old.remove();
+
+  renderBillets();
+};
 })();
 
 /* ===== PATCH APA: 4724 + "-" = AUTO 8 L1 ===== */
