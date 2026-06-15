@@ -5879,7 +5879,7 @@ function testPrinter(){
     if(!wrap) return;
 
     var bar = document.createElement("div");
-    bar.style.cssText = "position:sticky;top:0;z-index:99;background:#efeff4;padding:8px 4px 10px;";
+    bar.style.cssText = "position:sticky;top:0;z-index:1;background:#efeff4;padding:8px 4px 10px;";
     bar.innerHTML =
       '<input type="date" id="billetsDateInput" value="' + billetsDateFilter + '" ' +
       'style="width:100%;height:42px;border:1px solid #ddd;border-radius:12px;text-align:center;font-size:18px;font-weight:800;background:#fff;">';
