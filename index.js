@@ -3713,14 +3713,8 @@ title.onclick = function(){
        '<div>' + Number(j.montant).toFixed(2) + '</div>';
 
      row.onclick = function(){
-       if(confirm("Supprimer ?")){
-         var idx = jeux.indexOf(j);
-         if(idx >= 0){
-           jeux.splice(idx, 1);
-           renderJeux();
-         }
-       }
-     };
+  openJeuMenu(j);
+};
 
      area.appendChild(row);
    });
@@ -3728,6 +3722,128 @@ title.onclick = function(){
 
  document.getElementById("ticketCount").textContent = String(jeux.length);
  document.getElementById("ticketTotal").textContent = total.toFixed(2);
+}
+
+
+function openJeuMenu(j){
+  var old = document.getElementById("jeuMenuOverlay");
+  if(old) old.remove();
+
+  var overlay = document.createElement("div");
+  overlay.id = "jeuMenuOverlay";
+  overlay.style.position = "fixed";
+  overlay.style.left = "0";
+  overlay.style.top = "0";
+  overlay.style.right = "0";
+  overlay.style.bottom = "0";
+  overlay.style.background = "rgba(0,0,0,0.35)";
+  overlay.style.zIndex = "999999";
+  overlay.onclick = function(){ overlay.remove(); };
+
+  var box = document.createElement("div");
+  box.style.position = "absolute";
+  box.style.left = "50%";
+  box.style.top = "45%";
+  box.style.transform = "translate(-50%,-50%)";
+  box.style.background = "#fff";
+  box.style.borderRadius = "8px";
+  box.style.width = "330px";
+  box.style.boxShadow = "0 4px 15px rgba(0,0,0,.3)";
+  box.style.overflow = "hidden";
+  box.style.zIndex = "1000000";
+  box.onclick = function(e){ e.stopPropagation(); };
+
+  function item(txt, fn){
+    var d = document.createElement("div");
+    d.innerHTML = txt;
+    d.style.padding = "16px";
+    d.style.fontSize = "18px";
+    d.style.borderBottom = "1px solid #ddd";
+    d.onclick = fn;
+    box.appendChild(d);
+  }
+
+  item("✕ Supprimer le numéro", function(){
+    overlay.remove();
+    if(confirm("Supprimer ?")){
+      var idx = jeux.indexOf(j);
+      if(idx >= 0){
+        jeux.splice(idx, 1);
+        renderJeux();
+        updateFields();
+      }
+    }
+  });
+
+  item("💲 Modifier le montant", function(){
+    overlay.remove();
+    var m = prompt("Montant", j.montant);
+    if(m === null || m.trim() === "") return;
+    j.montant = parseFloat(m) || 0;
+    renderJeux();
+    updateFields();
+  });
+
+  item("# Modifier le numéro", function(){
+    overlay.remove();
+    var n = prompt("Numéro", j.numero);
+    if(n === null || n.trim() === "") return;
+    j.numero = n.trim();
+    renderJeux();
+    updateFields();
+  });
+
+  var d = document.createElement("div");
+  d.innerHTML = "🎚 Modifier la loterie";
+  d.style.padding = "16px";
+  d.style.fontSize = "18px";
+  d.onclick = function(){
+    overlay.remove();
+    modifierLoterieJeu(j);
+  };
+  box.appendChild(d);
+
+  overlay.appendChild(box);
+  document.body.appendChild(overlay);
+}
+
+function modifierLoterieJeu(j){
+  var oldValidateLoteries = validateLoteries;
+  var oldGame = Object.assign({}, j);
+
+  selectedLoteries = [j.loterie];
+  activeField = "loterie";
+  updateFields();
+
+  validateLoteries = function(){
+    document.getElementById("loterieModal").classList.remove("show");
+    document.getElementById("overlay").classList.remove("show");
+
+    if(selectedLoteries.length === 0){
+      activeField = "loterie";
+      updateFields();
+      openLoterieModal();
+      return;
+    }
+
+    var idx = jeux.indexOf(j);
+    if(idx >= 0){
+      jeux.splice(idx, 1);
+    }
+
+    selectedLoteries.forEach(function(newLot){
+      var copie = Object.assign({}, oldGame);
+      copie.loterie = newLot;
+      jeux.push(copie);
+    });
+
+    validateLoteries = oldValidateLoteries;
+
+    renderJeux();
+    updateFields();
+  };
+
+  openLoterieModal();
 }
 
 
