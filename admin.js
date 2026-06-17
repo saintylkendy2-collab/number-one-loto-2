@@ -538,12 +538,35 @@ router.get("/api/reportes/ventas", async (req, res) => {
 
     const ticketQuery = buildDateQuery(start, end);
 
-    const [vendorsArr, tickets] = await Promise.all([
-      Vendor.find().lean(),
-      Ticket.find(ticketQuery)
-        .select("vendeur dateLabel status total premio")
-        .lean()
-    ]);
+   const [vendorsArr, tickets] = await Promise.all([
+  Vendor.find().lean(),
+  Ticket.aggregate([
+    { $match: ticketQuery },
+    {
+      $group: {
+        _id: "$vendeur",
+        venta: {
+          $sum: {
+            $cond: [
+              { $ne: [{ $toUpper: "$status" }, "ANILE"] },
+              { $toDouble: "$total" },
+              0
+            ]
+          }
+        },
+        premios: {
+          $sum: {
+            $cond: [
+              { $eq: [{ $toUpper: "$status" }, "GANYE"] },
+              { $toDouble: "$premio" },
+              0
+            ]
+          }
+        }
+      }
+    }
+  ])
+]);
 
     const vendeurs = {};
     vendorsArr.forEach(v => {
@@ -554,7 +577,7 @@ router.get("/api/reportes/ventas", async (req, res) => {
     const map = {};
 
     for (const t of tickets) {
-      const id = String(t.vendeur || "").trim().toUpperCase();
+  const id = String(t._id || "").trim().toUpperCase();
       if (!id) continue;
 
       const vendor = normalizeVendor(vendeurs[id] || {});
@@ -574,8 +597,8 @@ router.get("/api/reportes/ventas", async (req, res) => {
         };
       }
 
-      if (status !== "ANILE") map[id].venta += parseAmount(t.total);
-      if (status === "GANYE") map[id].premios += parseAmount(t.premio);
+      map[id].venta += parseAmount(t.venta);
+map[id].premios += parseAmount(t.premios);
     }
 
     Object.keys(map).forEach(id => {

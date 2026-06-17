@@ -6983,15 +6983,32 @@ app.get("/api/reportes/tickets", async (req, res) => {
       q.dateLabel = isoToDMY(date);
     }
 
-   const tickets = await Ticket.find(q)
-  .select("id ticketId serial vendeur vendeurNom createdAt createdAtLabel dateLabel timeLabel status premio total jeux.type")
-  .sort({ _id: -1 })
-  .limit(5000)
-  .lean();
+    const tickets = await Ticket.aggregate([
+      { $match: q },
+      { $sort: { _id: -1 } },
+      { $limit: 5000 },
+      {
+        $project: {
+          id: 1,
+          ticketId: 1,
+          serial: 1,
+          vendeur: 1,
+          vendeurNom: 1,
+          createdAt: 1,
+          createdAtLabel: 1,
+          dateLabel: 1,
+          timeLabel: 1,
+          status: 1,
+          premio: 1,
+          total: 1,
+          jugs: { $size: { $ifNull: ["$jeux", []] } }
+        }
+      }
+    ]);
 
     res.json(tickets);
   } catch (err) {
-    console.error("Erreur /api/reportes/tickets index:", err.message);
+    console.error("Erreur /api/reportes/tickets:", err);
     res.status(500).json([]);
   }
 });
