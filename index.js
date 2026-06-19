@@ -1585,6 +1585,48 @@ const totalTicket = safeJeux.reduce(
   0
 );
 
+function gameKey(j){
+  return [
+    normGameType(j.type),
+    String(j.numero || "").trim(),
+    String(j.loterie || "").trim().toUpperCase(),
+    Number(j.montant || 0)
+  ].join("|");
+}
+
+const newSignature = safeJeux
+  .map(gameKey)
+  .sort()
+  .join("||");
+
+const recentTickets = await Ticket.find({
+  vendeur: sellerId,
+  dateLabel: todayLabel,
+  total: totalTicket,
+  status: { $ne: "ANILE" },
+  createdAt: { $gte: new Date(Date.now() - 3 * 60 * 1000) }
+})
+.select("id ticketId serial vendeur vendeurNom createdAt createdAtLabel dateLabel timeLabel status premio total jeux")
+.lean();
+
+const sameRecentTicket = recentTickets.find(function(t){
+  const oldSignature = (t.jeux || [])
+    .filter(function(j){ return Number(j.montant || 0) > 0; })
+    .map(gameKey)
+    .sort()
+    .join("||");
+
+  return oldSignature === newSignature;
+});
+
+if (sameRecentTicket) {
+  return res.json({
+    ok: true,
+    duplicate: true,
+    ticket: sameRecentTicket
+  });
+}
+
 const balance = Number(vendor.balance || 0);
 
 if (
