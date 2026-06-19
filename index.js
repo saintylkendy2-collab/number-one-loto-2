@@ -1010,128 +1010,140 @@ app.get("/api/vendor/:id/tickets", async (req, res) => {
     res.set("Cache-Control", "no-store");
 
     const sellerId = String(req.params.id || "").trim().toUpperCase();
+    const selectedDate = String(req.query.date || "").trim();
 
-const vendor = await Vendor.findOne({ id: sellerId }).lean();
-const vendorConfig = vendor || {};
-
-   const tickets = await Ticket.find({ vendeur: sellerId })
-  .sort({ createdAt: -1 })
-  .lean();
-
-    const dates = [...new Set(tickets.map(t => String(t.dateLabel || "").trim()).filter(Boolean))];
-
-    const sorteos = await Sorteo.find({ date: { $in: dates } }).lean();
-
-    const sorteoMap = {};
-    sorteos.forEach(s => {
-      const key =
-        String(s.date || "").trim() + "|" +
-        String(s.loteria || "").trim().toUpperCase();
-
-      sorteoMap[key] = s;
-    });
-
-    function clean(v){
-      return String(v || "").trim().replace(/\s+/g, "");
+    function isoToDMY(v){
+      const m = String(v || "").match(/^(\d{4})-(\d{2})-(\d{2})$/);
+      if(m) return m[3] + "/" + m[2] + "/" + m[1];
+      return v;
     }
 
-    function pad2(v){
-      const s = clean(v);
-      if (/^\d$/.test(s)) return "0" + s;
-      return s;
+    const q = { vendeur: sellerId };
+
+    if(selectedDate){
+      q.dateLabel = isoToDMY(selectedDate);
+    } else {
+      q.dateLabel = new Date().toLocaleDateString("fr-FR");
     }
 
-    function gameWin(j, tirage){
-      const type = String(j.type || "").trim().toUpperCase();
-      const played = clean(j.numero);
-
-      const r1 = clean(tirage.r1);  // tèt
-      const r2 = pad2(tirage.r2);
-      const r3 = pad2(tirage.r3);
-      const r4 = pad2(tirage.r4);
-
-      if (type === "BOR") {
-        return [r2, r3, r4].includes(pad2(played));
+    const tickets = await Ticket.aggregate([
+      { $match: q },
+      { $sort: { _id: -1 } },
+      {
+        $project: {
+          id: 1,
+          ticketId: 1,
+          serial: 1,
+          vendeur: 1,
+          vendeurNom: 1,
+          createdAt: 1,
+          createdAtLabel: 1,
+          dateLabel: 1,
+          timeLabel: 1,
+          status: 1,
+          premio: 1,
+          total: 1,
+          jeux: 1
+        }
       }
+    ]);
 
-      if (type === "L3") {
-        return played === (r1 + r2); // 5 + 55 = 555
-      }
-
-     if (type === "MAR") {
-  return [
-    r2 + "*" + r3, r3 + "*" + r2,
-    r2 + "*" + r4, r4 + "*" + r2,
-    r3 + "*" + r4, r4 + "*" + r3
-  ].includes(played);
-}
-
-      return false;
-    }
-
-    const cleanTickets = tickets.map(t => {
-      const date = String(t.dateLabel || "").trim();
-      let totalGain = 0;
-      let hasResult = false;
-
-      const jeux = (t.jeux || []).map(j => {
-        const lot = String(j.loterie || "").trim().toUpperCase();
-        const tirage = sorteoMap[date + "|" + lot];
-
-let gain = 0;
-
-if (tirage) {
-  const hasBalls =
-    String(tirage.r1 || "").trim() ||
-    String(tirage.r2 || "").trim() ||
-    String(tirage.r3 || "").trim() ||
-    String(tirage.r4 || "").trim();
-
-  if (hasBalls) {
-    hasResult = true;
-
-    gain = getGain(j, tirage, vendorConfig);
-    totalGain += gain;
-  }
-}
-
-return {
-  type: j.type,
-  numero: j.numero,
-  loterie: j.loterie,
-  montant: Number(j.montant || 0),
-  gain: gain,
-gainLabel: money(gain)
-};
-      });
-
-      const realId = t.id || t.ticketId || t.serial || String(t._id || "");
-
-      return {
-        id: realId,
-        ticketId: realId,
-        serial: realId,
-        vendeur: t.vendeur,
-        vendeurNom: t.vendeurNom,
-        createdAt: t.createdAt,
-        createdAtLabel: t.createdAtLabel,
-        dateLabel: t.dateLabel,
-        timeLabel: t.timeLabel,
-        total: Number(t.total || 0),
-        jeux: jeux,
-        premio: totalGain,
-premioLabel: money(totalGain),
-        status: String(t.status || "").trim().toUpperCase() === "ANILE"
-  ? "ANILE"
-  : (!hasResult ? "ANATAN" : (totalGain > 0 ? "GANYE" : "PEDI"))
-      };
-    });
-
-    res.json(cleanTickets);
-
+    res.json(tickets);
   } catch (err) {
     console.error("GET TICKETS ERROR:", err);
     res.status(500).json([]);
+  }
+});
+
+
+app.get("/api/vendor/:id/rapport", async (req, res) => {
+  try {
+    const sellerId = String(req.params.id || "").trim().toUpperCase();
+    const start = String(req.query.start || "").trim();
+    const end = String(req.query.end || start || "").trim();
+
+    function isoToKey(v){
+      if(/^\d{4}-\d{2}-\d{2}$/.test(v)) return v;
+      return new Date().toISOString().slice(0,10);
+    }
+
+    const startKey = isoToKey(start);
+    const endKey = isoToKey(end);
+
+    const vendor = await Vendor.findOne({ id: sellerId }).lean();
+    const rate = Number(vendor?.comision?.general || 0);
+
+    const rows = await Ticket.aggregate([
+      { $match: { vendeur: sellerId } },
+      {
+        $addFields: {
+          dayKey: {
+            $concat: [
+              { $substr: ["$dateLabel", 6, 4] }, "-",
+              { $substr: ["$dateLabel", 3, 2] }, "-",
+              { $substr: ["$dateLabel", 0, 2] }
+            ]
+          },
+          st: { $toUpper: "$status" }
+        }
+      },
+      { $match: { dayKey: { $gte: startKey, $lte: endKey } } },
+      {
+        $facet: {
+          total: [
+            {
+              $group: {
+                _id: null,
+                vente: { $sum: { $cond: [{ $ne: ["$st", "ANILE"] }, "$total", 0] } },
+                prime: { $sum: { $cond: [{ $eq: ["$st", "GANYE"] }, "$premio", 0] } }
+              }
+            }
+          ],
+          byDay: [
+            {
+              $group: {
+                _id: "$dateLabel",
+                dayKey: { $first: "$dayKey" },
+                vente: { $sum: { $cond: [{ $ne: ["$st", "ANILE"] }, "$total", 0] } },
+                prime: { $sum: { $cond: [{ $eq: ["$st", "GANYE"] }, "$premio", 0] } }
+              }
+            },
+            { $sort: { dayKey: 1 } }
+          ],
+          byLoterie: [
+            { $unwind: "$jeux" },
+            {
+              $group: {
+                _id: "$jeux.loterie",
+                vente: { $sum: { $cond: [{ $ne: ["$st", "ANILE"] }, "$jeux.montant", 0] } },
+                prime: { $sum: { $cond: [{ $eq: ["$st", "GANYE"] }, { $ifNull: ["$jeux.gain", 0] }, 0] } }
+              }
+            },
+            { $sort: { _id: 1 } }
+          ]
+        }
+      }
+    ]);
+
+    const total = rows[0]?.total?.[0] || {};
+    const vente = Number(total.vente || 0);
+    const prime = Number(total.prime || 0);
+    const commission = vente * rate / 100;
+    const resultat = vente - prime - commission;
+
+    res.json({
+      vente,
+      prime,
+      commission,
+      resultat,
+      rate,
+      byDay: rows[0]?.byDay || [],
+      byLoterie: rows[0]?.byLoterie || []
+    });
+
+  } catch (err) {
+    console.error("VENDOR RAPPORT ERROR:", err);
+    res.status(500).json({ vente:0, prime:0, commission:0, resultat:0, byDay:[], byLoterie:[] });
   }
 });
 
@@ -4318,9 +4330,12 @@ function switchPage(pageId, el){
 
   if(el) el.classList.add("active");
 
-  if(pageId === "billetsPage"){
+    if(pageId === "billetsPage"){
     loadBillets();
   }
+if(pageId === "rapportsPage"){
+  renderRapports();
+}
 }
 
 function statusClass(status){
@@ -4340,19 +4355,26 @@ function statusLabel(status){
 }
 
 function loadBillets(){
- fetch("/api/vendor/" + encodeURIComponent(sellerId) + "/tickets?ts=" + Date.now(), {
+ var dateInput = document.getElementById("billetsDateInput");
+ var dateParam = "";
+
+ if(dateInput && dateInput.value){
+   dateParam = "&date=" + encodeURIComponent(dateInput.value);
+ }
+
+ fetch("/api/vendor/" + encodeURIComponent(sellerId) + "/tickets?ts=" + Date.now() + dateParam, {
   cache: "no-store"
 })
  .then(function(res){ return res.json(); })
  .then(function(rows){
- savedTickets = Array.isArray(rows) ? rows : [];
- renderBillets();
- renderRapports();
+  savedTickets = Array.isArray(rows) ? rows : [];
+  renderBillets();
+  renderRapports();
  })
  .catch(function(){
- savedTickets = [];
- renderBillets();
- renderRapports();
+  savedTickets = [];
+  renderBillets();
+  renderRapports();
  });
 }
 
@@ -4747,247 +4769,151 @@ function renderRapports(){
   var box = document.getElementById("rapportsPage");
   if(!box) return;
 
-  function toIsoDay(value){
-    var d = new Date(value || new Date());
-    var y = d.getFullYear();
-    var m = String(d.getMonth() + 1).padStart(2, "0");
-    var day = String(d.getDate()).padStart(2, "0");
-    return y + "-" + m + "-" + day;
+  function todayISO(){
+    var d = new Date();
+    return d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2,"0") + "-" + String(d.getDate()).padStart(2,"0");
   }
 
-  function toFr(iso){
-    if(!iso) return "";
-    var p = iso.split("-");
-    if(p.length !== 3) return iso;
-    return p[2] + "/" + p[1] + "/" + p[0];
+  function fr(iso){
+    var p = String(iso || "").split("-");
+    return p.length === 3 ? p[2] + "/" + p[1] + "/" + p[0] : iso;
+  }
+
+  function fm(v){
+    return Number(v || 0).toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2});
   }
 
   var oldStart = document.getElementById("rapportDateStart");
   var oldEnd = document.getElementById("rapportDateEnd");
 
-  var todayStr = toIsoDay(new Date());
-  var startValue = oldStart ? oldStart.value : todayStr;
-  var endValue = oldEnd ? oldEnd.value : todayStr;
+  var startValue = oldStart ? oldStart.value : todayISO();
+var endValue = oldEnd ? oldEnd.value : todayISO();
 
-  var filtered = savedTickets.filter(function(t){
-    var d = t.dateLabel
-  ? t.dateLabel.split("/").reverse().join("-")
-  : toIsoDay(t.createdAt || new Date());
-    return d >= startValue && d <= endValue;
-  });
+  fetch("/api/vendor/" + encodeURIComponent(sellerId) + "/rapport?start=" + encodeURIComponent(startValue) + "&end=" + encodeURIComponent(endValue) + "&ts=" + Date.now(), {
+    cache:"no-store"
+  })
+  .then(function(r){ return r.json(); })
+  .then(function(data){
+    var vente = Number(data.vente || 0);
+    var prime = Number(data.prime || 0);
+    var commission = Number(data.commission || 0);
+    var resultat = Number(data.resultat || 0);
+    var rate = Number(data.rate || 0);
 
-  var vente = 0;
-  var prime = 0;
+    var daysHtml = "";
+    (data.byDay || []).forEach(function(d){
+      var v = Number(d.vente || 0);
+      var p = Number(d.prime || 0);
+      var c = v * rate / 100;
+      var b = v - p - c;
 
-  var byDay = {};
-  var byLoterie = {};
+      daysHtml +=
+        '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;text-align:center;font-size:18px;margin-bottom:18px;">' +
+          '<div>' + fm(v) + '<div style="font-size:15px;color:#666;margin-top:4px;">' + fm(c) + '</div></div>' +
+          '<div>' + fm(p) + '</div>' +
+          '<div>' + fm(b) + '<div style="font-size:15px;color:#666;margin-top:4px;">' + d._id + '</div></div>' +
+        '</div>';
+    });
 
-  filtered.forEach(function(t){
-    var st = String(t.status || "").toUpperCase();
-    if(st === "ANILE") return;
-
-    var total = Number(t.total || 0);
-    var premio = st === "GANYE" ? Number(t.premio || 0) : 0;
-    var dayKey = t.dateLabel
-  ? t.dateLabel.split("/").reverse().join("-")
-  : toIsoDay(t.createdAt || new Date());
-
-    vente += total;
-    prime += premio;
-
-    if(!byDay[dayKey]){
-      byDay[dayKey] = { vente: 0, prime: 0 };
-    }
-    byDay[dayKey].vente += total;
-    byDay[dayKey].prime += premio;
-
-    (t.jeux || []).forEach(function(j){
-  var lot = String(j.loterie || "").trim() || "SANS TIRAGE";
-  var amt = Number(j.montant || 0);
-  var gain = st === "GANYE" ? Number(j.gain || 0) : 0;
-
-  if(!byLoterie[lot]){
-    byLoterie[lot] = { vente: 0, prime: 0 };
-  }
-
-  byLoterie[lot].vente += amt;
-  byLoterie[lot].prime += gain;
-});
-  });
-
-var commission = vente * (Number(sellerCommissionRate || 0) / 100);
-var resultat = vente - prime - commission;
-
-  var daysHtml = "";
-  var sortedDays = Object.keys(byDay).sort();
-  sortedDays.forEach(function(day){
-    var d = byDay[day];
-  var dCommission = d.vente * (Number(sellerCommissionRate || 0) / 100);
-var dBalance = d.vente - d.prime - dCommission;
-
-daysHtml +=
-  '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;text-align:center;font-size:18px;margin-bottom:18px;">' +
-    '<div>' + Number(d.vente || 0).toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2}) + '<div style="font-size:15px;color:#666;margin-top:4px;">' + Number(dCommission || 0).toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2}) + '</div></div>' +
-    '<div>' + Number(d.prime || 0).toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2}) + '</div>' +
-    '<div>' + Number(dBalance || 0).toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2}) + '<div style="font-size:15px;color:#666;margin-top:4px;">' + toFr(day) + '</div></div>' +
-  '</div>';
-});
-
-if(!daysHtml){
-  daysHtml =
-    '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;text-align:center;font-size:18px;margin-bottom:18px;">' +
-      '<div>0.00<div style="font-size:15px;color:#666;margin-top:4px;">0.00</div></div>' +
-      '<div>0.00</div>' +
-      '<div>0.00<div style="font-size:15px;color:#666;margin-top:4px;">' + toFr(endValue) + '</div></div>' +
-    '</div>';
-}
-
-  var loterieHtml = "";
-  var lotKeys = Object.keys(byLoterie).sort();
-  lotKeys.forEach(function(lot){
-    var l = byLoterie[lot];
-    var lCommission = 0;
-    var lBalance = l.vente - l.prime - lCommission;
+    var loterieHtml = "";
+    (data.byLoterie || []).forEach(function(l){
+      var v = Number(l.vente || 0);
+      var p = Number(l.prime || 0);
+      var b = v - p;
 
       loterieHtml +=
-    '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;text-align:center;font-size:18px;margin-bottom:18px;">' +
-      '<div>' + Number(l.vente || 0).toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2}) + '<div style="font-size:15px;color:#666;margin-top:4px;">' + Number(lCommission || 0).toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2}) + '</div></div>' +
-      '<div>' + Number(l.prime || 0).toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2}) + '</div>' +
-      '<div>' + Number(lBalance || 0).toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2}) + '<div style="font-size:15px;color:#666;margin-top:4px;">' + lot + '</div></div>' +
-    '</div>';
-});
+        '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;text-align:center;font-size:18px;margin-bottom:18px;">' +
+          '<div>' + fm(v) + '</div>' +
+          '<div>' + fm(p) + '</div>' +
+          '<div>' + fm(b) + '<div style="font-size:15px;color:#666;margin-top:4px;">' + (l._id || "") + '</div></div>' +
+        '</div>';
+    });
 
-if(!loterieHtml){
-  loterieHtml =
-    '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;text-align:center;font-size:18px;margin-bottom:18px;">' +
-      '<div>' + Number(vente || 0).toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2}) + '<div style="font-size:15px;color:#666;margin-top:4px;">' + Number(commission || 0).toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2}) + '</div></div>' +
-      '<div>' + Number(prime || 0).toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2}) + '</div>' +
-      '<div>' + Number(resultat || 0).toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2}) + '</div>' +
-    '</div>';
-}
-
-  box.innerHTML =
-  '<div style="height:100%;display:flex;flex-direction:column;background:#f5f5f5;">' +
-
-    '<div style="height:58px;min-height:58px;background:#2f49d1;color:#fff;display:flex;align-items:center;justify-content:space-between;padding:0 14px;">' +
-      '<button id="rapportBackBtn" type="button" style="background:none;border:none;color:#fff;font-size:24px;cursor:pointer;">←</button>' +
-      '<div style="font-size:22px;font-weight:700;">Rapports</div>' +
-      '<div style="display:flex;gap:18px;align-items:center;">' +
-        '<button id="rapportPrintBtn" type="button" style="background:none;border:none;color:#fff;font-size:20px;cursor:pointer;">🖨️</button>' +
-        '<button id="rapportRefreshBtn" type="button" style="background:none;border:none;color:#fff;font-size:22px;cursor:pointer;">↻</button>' +
-      '</div>' +
-    '</div>' +
-
-    '<div style="padding:14px;overflow:auto;flex:1;">' +
-
-      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:18px;">' +
-        '<input id="rapportDateStart" type="date" value="' + startValue + '" style="width:100%;border:none;border-bottom:1px solid #999;background:transparent;padding:10px 0;font-size:18px;outline:none;">' +
-        '<input id="rapportDateEnd" type="date" value="' + endValue + '" style="width:100%;border:none;border-bottom:1px solid #999;background:transparent;padding:10px 0;font-size:18px;outline:none;">' +
-      '</div>' +
-
-      '<div style="background:#fff;padding:18px 16px;margin-bottom:18px;">' +
-  '<div style="display:grid;grid-template-columns:1fr 1fr;row-gap:8px;font-size:18px;line-height:1.5;">' +
-    '<div style="text-align:center;font-weight:700;">Ventes</div><div style="text-align:center;font-weight:700;">' + Number(vente || 0).toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2}) + '</div>' +
-    '<div style="text-align:center;font-weight:700;">Prix</div><div style="text-align:center;font-weight:700;">' + Number(prime || 0).toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2}) + '</div>' +
-    '<div style="text-align:center;font-weight:700;">Commission</div><div style="text-align:center;font-weight:700;">' + Number(commission || 0).toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2}) + '</div>' +
-    '<div style="text-align:center;font-weight:700;">Résultat</div><div style="text-align:center;font-weight:700;">' + Number(resultat || 0).toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2}) + '</div>' +
-  '</div>' +
-'</div>' +
-
-      '<div style="background:#fff;padding:18px 16px;margin-bottom:18px;text-align:center;">' +
-        '<div style="font-size:22px;font-weight:700;margin-bottom:18px;">RESUMEN POR DÍA</div>' +
-        '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;text-align:center;font-size:18px;margin-bottom:14px;">' +
-          '<div>VENTE</div>' +
-          '<div>PRIME</div>' +
-          '<div>BALANCE</div>' +
+    box.innerHTML =
+      '<div style="height:100%;display:flex;flex-direction:column;background:#f5f5f5;">' +
+        '<div style="height:58px;min-height:58px;background:#2f49d1;color:#fff;display:flex;align-items:center;justify-content:space-between;padding:0 14px;">' +
+          '<button id="rapportBackBtn" type="button" style="background:none;border:none;color:#fff;font-size:24px;cursor:pointer;">←</button>' +
+          '<div style="font-size:22px;font-weight:700;">Rapports</div>' +
+          '<div style="display:flex;gap:18px;align-items:center;">' +
+            '<button id="rapportPrintBtn" type="button" style="background:none;border:none;color:#fff;font-size:20px;cursor:pointer;">🖨️</button>' +
+            '<button id="rapportRefreshBtn" type="button" style="background:none;border:none;color:#fff;font-size:22px;cursor:pointer;">↻</button>' +
+          '</div>' +
         '</div>' +
-        daysHtml +
-      '</div>' +
 
-      '<div style="background:#fff;padding:18px 16px;text-align:center;">' +
-        '<div style="font-size:22px;font-weight:700;margin-bottom:18px;">RESUMEN POR LOTERÍA</div>' +
-        '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;text-align:center;font-size:18px;margin-bottom:14px;">' +
-          '<div>VENTE</div>' +
-          '<div>PRIME</div>' +
-          '<div>BALANCE</div>' +
+        '<div style="padding:14px;overflow:auto;flex:1;">' +
+          '<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:18px;">' +
+            '<input id="rapportDateStart" type="date" value="' + startValue + '" style="width:100%;border:none;border-bottom:1px solid #999;background:transparent;padding:10px 0;font-size:18px;outline:none;">' +
+            '<input id="rapportDateEnd" type="date" value="' + endValue + '" style="width:100%;border:none;border-bottom:1px solid #999;background:transparent;padding:10px 0;font-size:18px;outline:none;">' +
+          '</div>' +
+
+          '<div style="background:#fff;padding:18px 16px;margin-bottom:18px;">' +
+            '<div style="display:grid;grid-template-columns:1fr 1fr;row-gap:8px;font-size:18px;line-height:1.5;">' +
+              '<div style="text-align:center;font-weight:700;">Ventes</div><div style="text-align:center;font-weight:700;">' + fm(vente) + '</div>' +
+              '<div style="text-align:center;font-weight:700;">Prix</div><div style="text-align:center;font-weight:700;">' + fm(prime) + '</div>' +
+              '<div style="text-align:center;font-weight:700;">Commission</div><div style="text-align:center;font-weight:700;">' + fm(commission) + '</div>' +
+              '<div style="text-align:center;font-weight:700;">Résultat</div><div style="text-align:center;font-weight:700;">' + fm(resultat) + '</div>' +
+            '</div>' +
+          '</div>' +
+
+          '<div style="background:#fff;padding:18px 16px;margin-bottom:18px;text-align:center;">' +
+            '<div style="font-size:22px;font-weight:700;margin-bottom:18px;">RESUMEN POR DÍA</div>' +
+            '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;text-align:center;font-size:18px;margin-bottom:14px;">' +
+              '<div>VENTE</div><div>PRIME</div><div>BALANCE</div>' +
+            '</div>' +
+            daysHtml +
+          '</div>' +
+
+          '<div style="background:#fff;padding:18px 16px;text-align:center;">' +
+            '<div style="font-size:22px;font-weight:700;margin-bottom:18px;">RESUMEN POR LOTERÍA</div>' +
+            '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;text-align:center;font-size:18px;margin-bottom:14px;">' +
+              '<div>VENTE</div><div>PRIME</div><div>BALANCE</div>' +
+            '</div>' +
+            loterieHtml +
+          '</div>' +
         '</div>' +
-        loterieHtml +
-      '</div>' +
+      '</div>';
 
-    '</div>' +
-  '</div>';
-
-  var backBtn = document.getElementById("rapportBackBtn");
-  var refreshBtn = document.getElementById("rapportRefreshBtn");
-  var printBtn = document.getElementById("rapportPrintBtn");
-  var startInput = document.getElementById("rapportDateStart");
-  var endInput = document.getElementById("rapportDateEnd");
-
-  if(backBtn){
-    backBtn.addEventListener("click", function(){
+    document.getElementById("rapportBackBtn").onclick = function(){
       switchPage("billetsPage", document.getElementById("nav-billets"));
-    });
-  }
+    };
 
-  if(refreshBtn){
-    refreshBtn.addEventListener("click", function(){
-      loadBillets();
-    });
-  }
+    document.getElementById("rapportRefreshBtn").onclick = renderRapports;
+    document.getElementById("rapportDateStart").onchange = renderRapports;
+    document.getElementById("rapportDateEnd").onchange = renderRapports;
 
- if(printBtn){
-  printBtn.addEventListener("click", function(){
-    var now = new Date();
-    var NL = "\\n";
+    document.getElementById("rapportPrintBtn").onclick = function(){
+      var now = new Date();
+      var NL = "\\n";
 
-    function fm(v){
-      return Number(v || 0).toLocaleString("en-US", {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2
-      });
-    }
+      function row(label, value){
+        var left = "| " + String(label || "").padEnd(12, " ");
+        var right = String(value || "").padStart(12, " ") + " |";
+        return left + right;
+      }
 
-    function row(label, value){
-      var left = "| " + String(label || "").padEnd(12, " ");
-      var right = String(value || "").padStart(12, " ") + " |";
-      return left + right;
-    }
+      var text = "";
+      text += "       NUMBER ONE LOTO 2" + NL;
+      text += "            RAPPORT" + NL;
+      text += "            " + sellerName + NL;
+      text += "   " + fr(startValue) + " / " + fr(endValue) + NL;
+      text += "     [ " + now.toLocaleDateString("fr-FR") + " " + now.toLocaleTimeString("fr-FR", {
+        hour: "2-digit",
+        minute: "2-digit"
+      }) + " ]" + NL;
+      text += "------------------------------" + NL;
+      text += row("Ventes", fm(vente)) + NL;
+      text += row("Prix", fm(prime)) + NL;
+      text += row("Commission", fm(commission)) + NL;
+      text += row("Resultat", fm(resultat)) + NL;
+      text += "------------------------------" + NL;
 
-    var text = "";
-    text += "       NUMBER ONE LOTO" + NL;
-    text += "            RAPPORT" + NL;
-    text += "            " + sellerName + NL;
-    text += "   " + toFr(startValue) + " / " + toFr(endValue) + NL;
-    text += "     [ " + now.toLocaleDateString("fr-FR") + " " + now.toLocaleTimeString("fr-FR", {
-      hour: "2-digit",
-      minute: "2-digit"
-    }) + " ]" + NL;
-    text += "------------------------------" + NL;
-    text += row("Ventes", fm(vente)) + NL;
-    text += row("Prix", fm(prime)) + NL;
-    text += row("Commission", fm(commission)) + NL;
-    text += row("Resultat", fm(resultat)) + NL;
-    text += "------------------------------" + NL;
-
-    if(window.AndroidPrinter && typeof AndroidPrinter.printTicket === "function"){
-      AndroidPrinter.printTicket(text);
-    }else{
-      alert(text);
-    }
+      if(window.AndroidPrinter && typeof AndroidPrinter.printTicket === "function"){
+        AndroidPrinter.printTicket(text);
+      }else{
+        alert(text);
+      }
+    };
   });
-}
-
-  if(startInput){
-    startInput.addEventListener("change", function(){
-      renderRapports();
-    });
-  }
-
-  if(endInput){
-    endInput.addEventListener("change", function(){
-      renderRapports();
-    });
-  }
 }
 
 function updateTicketStatus(id, status, premio){
@@ -5888,7 +5814,7 @@ function testPrinter(){
 
     document.getElementById("billetsDateInput").onchange = function(){
       billetsDateFilter = this.value;
-      renderBillets();
+      loadBillets();
     };
   };
 })();
@@ -7014,15 +6940,7 @@ app.get("/api/reportes/tickets", async (req, res) => {
 });
 
 
-app.get("/tickets/:vendeur", async (req, res) => {
-  try {
-    const vendeurId = String(req.params.vendeur || "").trim().toUpperCase();
-    const tickets = await Ticket.find({ vendeur: vendeurId }).sort({ createdAt: -1 }).lean();
-    res.json(tickets);
-  } catch (err) {
-    res.status(500).json([]);
-  }
-});
+
 
 const adminRoutes = require("./admin");
 app.use(adminRoutes);
