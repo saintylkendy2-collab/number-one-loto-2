@@ -1977,14 +1977,12 @@ router.post("/api/sorteos/save", async (req, res) => {
       );
     }
 
-res.json({ ok: true, date: date });
-
-runCheckTickets(
+await runCheckTickets(
   date,
   rows.map(r => String(r.loteria || "").trim().toUpperCase())
-).catch(err => console.error(err));
+);
 
-    res.json({ ok: true, date: date });
+res.json({ ok: true, date: date });
 
   } catch (err) {
     console.error("Erreur save sorteos Mongo:", err);
