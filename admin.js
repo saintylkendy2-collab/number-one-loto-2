@@ -6627,7 +6627,7 @@ function hideAllMasterPages(){
     const el = byId(id);
     if(el){
       el.classList.add("hidden");
-      el.style.display = "none";
+      el.style.display = "";
     }
   });
 }
