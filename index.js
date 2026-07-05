@@ -1627,15 +1627,43 @@ if (sameRecentTicket) {
   });
 }
 
-const balance = Number(vendor.balance || 0);
+const oldRows = await Ticket.aggregate([
+  {
+    $match: {
+      vendeur: sellerId,
+      status: { $ne: "ANILE" }
+    }
+  },
+  {
+    $group: {
+      _id: null,
+      ventes: { $sum: { $toDouble: "$total" } },
+      premios: {
+        $sum: {
+          $cond: [
+            { $eq: [{ $toUpper: "$status" }, "GANYE"] },
+            { $toDouble: "$premio" },
+            0
+          ]
+        }
+      }
+    }
+  }
+]);
 
-if (
-  credit > 0 &&
-  (
-    totalTicket > credit ||
-    (balance + totalTicket) > credit
-  )
-) {
+const oldVentes = Number(oldRows[0]?.ventes || 0);
+const oldPremios = Number(oldRows[0]?.premios || 0);
+
+const rate = Number(
+  vendor?.comision?.general ||
+  vendor?.comisionGeneral ||
+  0
+);
+
+const oldCommission = oldVentes * rate / 100;
+const currentBalance = oldVentes - oldCommission - oldPremios;
+
+if (credit > 0 && (currentBalance + totalTicket) > credit) {
   return res.status(403).json({
     ok:false,
     message:"OU PA GEN KREDI"
@@ -6969,6 +6997,7 @@ app.get("/api/reportes/tickets", async (req, res) => {
           status: 1,
           premio: 1,
           total: 1,
+           jeux: 1,
           jugs: { $size: { $ifNull: ["$jeux", []] } }
         }
       }

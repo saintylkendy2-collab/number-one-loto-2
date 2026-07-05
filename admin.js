@@ -411,6 +411,41 @@ function pad2(v){
 }
 
 function payout(config, key, def){
+  const premios = config && config.premios ? config.premios : {};
+
+  if(premios.habilitar === false){
+    return def;
+  }
+
+  const map = {
+    "premios.borlette1": ["borlette", 0],
+    "premios.borlette2": ["borlette", 1],
+    "premios.borlette3": ["borlette", 2],
+
+    "premios.mariage": ["mariage", 0],
+
+    "premios.loto3": ["loto3", 0],
+
+    "premios.l41": ["loto4", 0],
+    "premios.l42": ["loto4", 1],
+    "premios.l43": ["loto4", 2],
+
+    "premios.l51": ["loto5", 0],
+    "premios.l52": ["loto5", 1],
+    "premios.l53": ["loto5", 2]
+  };
+
+  if(map[key]){
+    const arrName = map[key][0];
+    const idx = map[key][1];
+    const arr = premios[arrName];
+
+    if(Array.isArray(arr)){
+      const n = Number(arr[idx]);
+      if(!isNaN(n) && n > 0) return n;
+    }
+  }
+
   const val = key.split(".").reduce((o, k) => o && o[k], config);
   const n = Number(val);
   return isNaN(n) ? def : n;
@@ -6896,35 +6931,39 @@ function renderVentasDetalle(){
   let totalCount = 0;
   let totalVenta = 0;
 
-  rows.forEach(function(r){
-    totalCount += r.count;
-    totalVenta += r.venta;
+ var html = "";
 
-    let col1 = "";
-    let col2 = "";
+rows.forEach(function(r){
+  totalCount += r.count;
+  totalVenta += r.venta;
 
-    if(currentVentasMode === "numero"){
-      col1 = labelType(r.type);
-      col2 = r.numero;
-    }
+  let col1 = "";
+  let col2 = "";
 
-    if(currentVentasMode === "jugada"){
-      col1 = labelType(r.type);
-      col2 = r.count;
-    }
+  if(currentVentasMode === "numero"){
+    col1 = labelType(r.type);
+    col2 = r.numero;
+  }
 
-    if(currentVentasMode === "loteria"){
-      col1 = r.loteria;
-      col2 = r.count;
-    }
+  if(currentVentasMode === "jugada"){
+    col1 = labelType(r.type);
+    col2 = r.count;
+  }
 
-    body.innerHTML +=
-      '<tr>' +
-        '<td style="text-align:left;padding:12px 14px;">' + safe(col1) + '</td>' +
-        '<td style="text-align:center;padding:12px 14px;">' + safe(col2) + '</td>' +
-        '<td style="text-align:right;padding:12px 14px;">' + formatAmount(r.venta) + '</td>' +
-      '</tr>';
-  });
+  if(currentVentasMode === "loteria"){
+    col1 = r.loteria;
+    col2 = r.count;
+  }
+
+  html +=
+    '<tr>' +
+      '<td style="text-align:left;padding:12px 14px;">' + safe(col1) + '</td>' +
+      '<td style="text-align:center;padding:12px 14px;">' + safe(col2) + '</td>' +
+      '<td style="text-align:right;padding:12px 14px;">' + formatAmount(r.venta) + '</td>' +
+    '</tr>';
+});
+
+body.innerHTML = html;
 
   foot.innerHTML =
     '<tr style="background:#3b405c;font-weight:900;">' +
