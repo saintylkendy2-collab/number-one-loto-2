@@ -1627,23 +1627,69 @@ if (sameRecentTicket) {
   });
 }
 
-const oldRows = await Ticket.aggregate([
+function parseMoney(v){
+  const n = Number(String(v || 0).replace(/,/g, "").trim());
+  return Number.isFinite(n) ? n : 0;
+}
+
+function todayISO(){
+  const d = new Date();
+  return d.getFullYear() + "-" +
+    String(d.getMonth() + 1).padStart(2, "0") + "-" +
+    String(d.getDate()).padStart(2, "0");
+}
+
+const selectedDateCredit = todayISO();
+
+const ticketAggCredit = await Ticket.aggregate([
+  {
+    $project: {
+      vendeur: 1,
+      status: 1,
+      total: 1,
+      premio: 1,
+      isoDate: {
+        $concat: [
+          { $substr: ["$dateLabel", 6, 4] },
+          "-",
+          { $substr: ["$dateLabel", 3, 2] },
+          "-",
+          { $substr: ["$dateLabel", 0, 2] }
+        ]
+      }
+    }
+  },
   {
     $match: {
       vendeur: sellerId,
+      isoDate: { $lte: selectedDateCredit },
       status: { $ne: "ANILE" }
     }
   },
   {
     $group: {
       _id: null,
-      ventes: { $sum: { $toDouble: "$total" } },
-      premios: {
+      balanceTickets: {
         $sum: {
-          $cond: [
-            { $eq: [{ $toUpper: "$status" }, "GANYE"] },
-            { $toDouble: "$premio" },
-            0
+          $subtract: [
+            {
+              $subtract: [
+                { $toDouble: "$total" },
+                {
+                  $multiply: [
+                    { $toDouble: "$total" },
+                    Number(vendor?.comision?.general || vendor?.comisionGeneral || 0) / 100
+                  ]
+                }
+              ]
+            },
+            {
+              $cond: [
+                { $eq: [{ $toUpper: "$status" }, "GANYE"] },
+                { $toDouble: "$premio" },
+                0
+              ]
+            }
           ]
         }
       }
@@ -1651,17 +1697,9 @@ const oldRows = await Ticket.aggregate([
   }
 ]);
 
-const oldVentes = Number(oldRows[0]?.ventes || 0);
-const oldPremios = Number(oldRows[0]?.premios || 0);
-
-const rate = Number(
-  vendor?.comision?.general ||
-  vendor?.comisionGeneral ||
-  0
-);
-
-const oldCommission = oldVentes * rate / 100;
-const currentBalance = oldVentes - oldCommission - oldPremios;
+const currentBalance =
+  parseMoney(vendor.balance) +
+  Number(ticketAggCredit[0]?.balanceTickets || 0);
 
 if (credit > 0 && (currentBalance + totalTicket) > credit) {
   return res.status(403).json({
