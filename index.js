@@ -1425,6 +1425,21 @@ if (clientRequestId) {
       return res.status(400).json({ ok: false, message: "Pa gen jwèt" });
     }
 
+    const globalConfig =
+  await AppConfig.findOne({ key: "main" })
+    .select("ventasGlobalEnabled")
+    .lean();
+
+if (
+  globalConfig &&
+  globalConfig.ventasGlobalEnabled === false
+) {
+  return res.status(403).json({
+    ok: false,
+    message: "SISTÈM VANT LAN DEZAKTIVE"
+  });
+}
+
   const safeJeux = jeux.map(j => ({
   type: normGameType(j.type),
   numero: String(j.numero || "").trim(),

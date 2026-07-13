@@ -465,13 +465,13 @@ function getGainAdmin(j, tirage, config){
 
   let pay = 0;
 
-  if(type === "BOR"){
-    const played = pad2(num);
-if(played === r2) pay = payout(config, "premios.borlette1", 70);
-else if(played === r3) pay = payout(config, "premios.borlette2", 15);
-else if(played === r4) pay = payout(config, "premios.borlette3", 10);
-   
-  }
+if(type === "BOR"){
+  const played = pad2(num);
+
+  if(played === r2) pay += payout(config, "premios.borlette1", 70);
+  if(played === r3) pay += payout(config, "premios.borlette2", 15);
+  if(played === r4) pay += payout(config, "premios.borlette3", 10);
+}
 
   else if(type === "MAR"){
     const isGratis =
@@ -2195,6 +2195,67 @@ router.post("/api/loterias/:id", async (req, res) => {
   }
 });
 
+
+router.get("/api/ventas-global-status", async (req, res) => {
+  try {
+    let config = await AppConfig.findOne({ key: "main" });
+
+    if (!config) {
+      config = await AppConfig.create({
+        key: "main",
+        ventasGlobalEnabled: true
+      });
+    }
+
+    res.json({
+      ok: true,
+      enabled: config.ventasGlobalEnabled !== false
+    });
+
+  } catch (err) {
+    console.error("GET VENTAS GLOBAL STATUS ERROR:", err);
+
+    res.status(500).json({
+      ok: false,
+      message: "Erreur chargement état système"
+    });
+  }
+});
+
+
+router.post("/api/ventas-global-status", async (req, res) => {
+  try {
+    const enabled = req.body.enabled === true;
+
+    const config = await AppConfig.findOneAndUpdate(
+      { key: "main" },
+      {
+        $set: {
+          ventasGlobalEnabled: enabled
+        }
+      },
+      {
+        new: true,
+        upsert: true
+      }
+    );
+
+    res.json({
+      ok: true,
+      enabled: config.ventasGlobalEnabled !== false
+    });
+
+  } catch (err) {
+    console.error("SAVE VENTAS GLOBAL STATUS ERROR:", err);
+
+    res.status(500).json({
+      ok: false,
+      message: "Erreur sauvegarde état système"
+    });
+  }
+});
+
+
 router.get("/api/app-config", async (req, res) => {
 
   try {
@@ -3067,9 +3128,13 @@ tbody tr:nth-child(even){background:#313652;}
   <div class="side-menu-item" id="menu-config" onclick="toggleSubmenu('configMenu')">
     <span>Configuración</span><span>></span>
   </div>
-  <div id="configMenu" class="submenu-box">
-   <div class="submenu-item" onclick="goPage('grupos')">Grupo</div>
+ <div id="configMenu" class="submenu-box">
+  <div class="submenu-item" onclick="goPage('grupos')">Grupo</div>
+
+  <div class="submenu-item" onclick="openVentasGlobalPage()">
+    Aktive / Dezaktive
   </div>
+</div>
 
   <div class="side-menu-item" onclick="openTicketConfigPage()">
   <span>Ticket Config</span>
@@ -4385,7 +4450,6 @@ for(var b = 0; b < btns.length; b++){
 } 
 
 function editLoteriaAdmin(id){
-
   var row = null;
 
   for(var i = 0; i < loteriasAdminRows.length; i++){
@@ -4400,72 +4464,267 @@ function editLoteriaAdmin(id){
     return;
   }
 
-    var nuevoStatus = prompt(
-  "Estatus: Activo ou Bloqueado",
-  row.estatus || "Activo"
-);
+  var oldEditor = document.getElementById("loteriaEditorPage");
+  if(oldEditor) oldEditor.remove();
 
-if(nuevoStatus === null) return;
+  var loteriasPage = document.getElementById("loteriasPage");
+  if(loteriasPage){
+    loteriasPage.classList.add("hidden");
+    loteriasPage.style.display = "none";
+  }
 
-  var days = row.closeDays || {};
+  var daysClose = row.closeDays || {};
 
-  var monday = prompt("Lunes fermeture", days.monday || row.closeTime || "23:59");
-  if(monday === null) return;
+  var app =
+    document.getElementById("appPage") ||
+    document.body;
 
-  var tuesday = prompt("Martes fermeture", days.tuesday || row.closeTime || "23:59");
-  if(tuesday === null) return;
+  var editor = document.createElement("div");
+  editor.id = "loteriaEditorPage";
 
-  var wednesday = prompt("Miércoles fermeture", days.wednesday || row.closeTime || "23:59");
-  if(wednesday === null) return;
+  editor.style.cssText =
+    "padding:18px;background:#1d213d;color:#fff;" +
+    "min-height:100vh;box-sizing:border-box;";
 
-  var thursday = prompt("Jueves fermeture", days.thursday || row.closeTime || "23:59");
-  if(thursday === null) return;
+  function timeInput(id, label, value){
+    return (
+      '<div style="margin-bottom:15px;">' +
+        '<div style="font-size:17px;margin-bottom:7px;">' + label + '</div>' +
+        '<input id="' + id + '" type="time" value="' + value + '" ' +
+        'style="width:100%;box-sizing:border-box;padding:14px;' +
+        'font-size:18px;text-align:center;color:#fff;' +
+        'background:#2b304f;border:1px solid #596080;' +
+        'border-radius:10px;">' +
+      '</div>'
+    );
+  }
 
-  var friday = prompt("Viernes fermeture", days.friday || row.closeTime || "23:59");
-  if(friday === null) return;
+  var openValue = row.openTime || "00:00";
 
-  var saturday = prompt("Sábado fermeture", days.saturday || row.closeTime || "23:59");
-  if(saturday === null) return;
+  editor.innerHTML =
+    '<div style="display:flex;align-items:center;' +
+    'justify-content:space-between;margin-bottom:20px;">' +
 
-  var sunday = prompt("Domingo fermeture", days.sunday || row.closeTime || "23:59");
-  if(sunday === null) return;
+      '<button id="lotEditorBack" type="button" ' +
+      'style="background:none;border:2px solid #846cff;' +
+      'border-radius:10px;color:#fff;font-size:25px;' +
+      'padding:10px 22px;">«</button>' +
 
-  fetch("/api/loterias/" + id,{
-    method:"POST",
-    headers:{ "Content-Type":"application/json" },
-    body:JSON.stringify({
-      name: row.name,
-      abrev: row.abrev,
-      estatus: nuevoStatus,
-      openTime: row.openTime,
-      closeTime: monday,
-      closeDays:{
-        monday: monday,
-        tuesday: tuesday,
-        wednesday: wednesday,
-        thursday: thursday,
-        friday: friday,
-        saturday: saturday,
-        sunday: sunday
-      },
-      limite: row.limite === true,
-      pago: row.pago !== false
-    })
-  })
-  .then(function(res){ return res.json(); })
-  .then(function(data){
-    if(!data.ok){
-      alert(data.message || "Erreur modification");
-      return;
+      '<button id="lotEditorSave" type="button" ' +
+      'style="background:none;border:2px solid #55ddea;' +
+      'border-radius:10px;color:#55ddea;font-size:24px;' +
+      'padding:10px 22px;">💾</button>' +
+    '</div>' +
+
+    '<div style="font-size:30px;font-weight:700;margin-bottom:20px;">' +
+      'Lotería' +
+    '</div>' +
+
+    '<div style="background:#292e4b;padding:18px;' +
+    'border-radius:12px;margin-bottom:18px;">' +
+
+      '<div style="margin-bottom:14px;">' +
+        '<div style="font-size:17px;margin-bottom:7px;">Nombre</div>' +
+        '<input id="lotEditName" value="' + safe(row.name || "") + '" ' +
+        'style="width:100%;box-sizing:border-box;padding:14px;' +
+        'font-size:18px;color:#fff;background:#2b304f;' +
+        'border:1px solid #596080;border-radius:10px;">' +
+      '</div>' +
+
+      '<div style="margin-bottom:14px;">' +
+        '<div style="font-size:17px;margin-bottom:7px;">Abreviado</div>' +
+        '<input id="lotEditAbrev" value="' + safe(row.abrev || "") + '" ' +
+        'style="width:100%;box-sizing:border-box;padding:14px;' +
+        'font-size:18px;color:#fff;background:#2b304f;' +
+        'border:1px solid #596080;border-radius:10px;">' +
+      '</div>' +
+
+      '<div style="margin-bottom:14px;">' +
+        '<div style="font-size:17px;margin-bottom:7px;">Estatus</div>' +
+        '<select id="lotEditStatus" ' +
+        'style="width:100%;padding:14px;font-size:18px;color:#fff;' +
+        'background:#2b304f;border:1px solid #596080;' +
+        'border-radius:10px;">' +
+          '<option value="Activo"' +
+            (String(row.estatus).toLowerCase() === "activo" ? " selected" : "") +
+          '>✓ Activo</option>' +
+          '<option value="Bloqueado"' +
+            (String(row.estatus).toLowerCase() === "bloqueado" ? " selected" : "") +
+          '>Bloqueado</option>' +
+        '</select>' +
+      '</div>' +
+
+      '<div>' +
+        '<label style="display:flex;align-items:center;gap:10px;' +
+        'font-size:18px;margin-bottom:12px;">' +
+          '<input id="lotEditPago" type="checkbox" ' +
+            (row.pago !== false ? "checked" : "") + '>' +
+          'Pagos de Premios' +
+        '</label>' +
+
+        '<label style="display:flex;align-items:center;gap:10px;' +
+        'font-size:18px;">' +
+          '<input id="lotEditLimite" type="checkbox" ' +
+            (row.limite === true ? "checked" : "") + '>' +
+          'Límite de Ventas' +
+        '</label>' +
+      '</div>' +
+    '</div>' +
+
+    '<details style="background:#292e4b;border-radius:12px;' +
+    'margin-bottom:14px;">' +
+      '<summary style="padding:18px;font-size:21px;cursor:pointer;">' +
+        'Horario de Apertura' +
+      '</summary>' +
+
+      '<div style="padding:0 18px 18px;">' +
+        timeInput("lotOpenMonday", "Lundi", openValue) +
+        timeInput("lotOpenTuesday", "Mardi", openValue) +
+        timeInput("lotOpenWednesday", "Mercredi", openValue) +
+        timeInput("lotOpenThursday", "Jeudi", openValue) +
+        timeInput("lotOpenFriday", "Vendredi", openValue) +
+        timeInput("lotOpenSaturday", "Samedi", openValue) +
+        timeInput("lotOpenSunday", "Dimanche", openValue) +
+      '</div>' +
+    '</details>' +
+
+    '<details style="background:#292e4b;border-radius:12px;' +
+    'margin-bottom:14px;">' +
+      '<summary style="padding:18px;font-size:21px;cursor:pointer;">' +
+        'Horario de Cierre' +
+      '</summary>' +
+
+      '<div style="padding:0 18px 18px;">' +
+        timeInput(
+          "lotCloseMonday",
+          "Lundi",
+          daysClose.monday || row.closeTime || "23:59"
+        ) +
+        timeInput(
+          "lotCloseTuesday",
+          "Mardi",
+          daysClose.tuesday || row.closeTime || "23:59"
+        ) +
+        timeInput(
+          "lotCloseWednesday",
+          "Mercredi",
+          daysClose.wednesday || row.closeTime || "23:59"
+        ) +
+        timeInput(
+          "lotCloseThursday",
+          "Jeudi",
+          daysClose.thursday || row.closeTime || "23:59"
+        ) +
+        timeInput(
+          "lotCloseFriday",
+          "Vendredi",
+          daysClose.friday || row.closeTime || "23:59"
+        ) +
+        timeInput(
+          "lotCloseSaturday",
+          "Samedi",
+          daysClose.saturday || row.closeTime || "23:59"
+        ) +
+        timeInput(
+          "lotCloseSunday",
+          "Dimanche",
+          daysClose.sunday || row.closeTime || "23:59"
+        ) +
+      '</div>' +
+    '</details>';
+
+  app.appendChild(editor);
+
+  function closeEditor(){
+    editor.remove();
+
+    if(loteriasPage){
+      loteriasPage.classList.remove("hidden");
+      loteriasPage.style.display = "block";
     }
 
-    alert("Lotería modifiée");
     loadLoteriasAdmin();
-  })
-  .catch(function(err){
-    console.error(err);
-    alert("Erreur modification");
-  });
+  }
+
+  document.getElementById("lotEditorBack").onclick = closeEditor;
+
+  document.getElementById("lotEditorSave").onclick = function(){
+    var mondayClose =
+      document.getElementById("lotCloseMonday").value || "23:59";
+
+    var payload = {
+      name:
+        document.getElementById("lotEditName").value.trim(),
+
+      abrev:
+        document.getElementById("lotEditAbrev").value.trim(),
+
+      estatus:
+        document.getElementById("lotEditStatus").value,
+
+      /*
+        Backend aktyèl la gen yon sèl openTime.
+        Li pran lè Lendi a kòm lè ouvèti jeneral la.
+      */
+      openTime:
+        document.getElementById("lotOpenMonday").value || "00:00",
+
+      closeTime: mondayClose,
+
+      closeDays: {
+        monday:
+          document.getElementById("lotCloseMonday").value || mondayClose,
+
+        tuesday:
+          document.getElementById("lotCloseTuesday").value || mondayClose,
+
+        wednesday:
+          document.getElementById("lotCloseWednesday").value || mondayClose,
+
+        thursday:
+          document.getElementById("lotCloseThursday").value || mondayClose,
+
+        friday:
+          document.getElementById("lotCloseFriday").value || mondayClose,
+
+        saturday:
+          document.getElementById("lotCloseSaturday").value || mondayClose,
+
+        sunday:
+          document.getElementById("lotCloseSunday").value || mondayClose
+      },
+
+      limite:
+        document.getElementById("lotEditLimite").checked,
+
+      pago:
+        document.getElementById("lotEditPago").checked
+    };
+
+    fetch("/api/loterias/" + encodeURIComponent(id), {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(payload)
+    })
+    .then(function(res){
+      return res.json();
+    })
+    .then(function(data){
+      if(!data.ok){
+        alert(data.message || "Erreur modification");
+        return;
+      }
+
+      alert("Lotería modifiée");
+      closeEditor();
+    })
+    .catch(function(err){
+      console.error(err);
+      alert("Erreur modification");
+    });
+  };
 }
 
 
@@ -6974,116 +7233,610 @@ body.innerHTML = html;
     '</tr>';
 }
 
+
+async function openVentasGlobalPage(){
+
+  closeSideMenu();
+
+  var oldPage =
+    document.getElementById("ventasGlobalPage");
+
+  if(oldPage){
+    oldPage.remove();
+  }
+
+  document.querySelectorAll(".page-block").forEach(function(page){
+    page.classList.add("hidden");
+    page.style.display = "none";
+  });
+
+  var appPage =
+    document.getElementById("appPage");
+
+  if(!appPage) return;
+
+  var page =
+    document.createElement("div");
+
+  page.id = "ventasGlobalPage";
+  page.className = "page-block";
+
+  page.style.cssText =
+    "display:block;padding:18px;box-sizing:border-box;" +
+    "min-height:100vh;background:#1d213d;color:#fff;";
+
+  page.innerHTML =
+    '<div style="display:flex;align-items:center;' +
+    'justify-content:space-between;margin-bottom:25px;">' +
+
+      '<button id="ventasGlobalBack" type="button" ' +
+      'style="background:transparent;border:2px solid #846cff;' +
+      'color:#fff;border-radius:12px;font-size:24px;' +
+      'padding:10px 24px;">«</button>' +
+
+      '<div style="font-size:30px;font-weight:700;">' +
+        'Kontwòl sistèm vant' +
+      '</div>' +
+
+      '<div style="width:70px;"></div>' +
+    '</div>' +
+
+    '<div style="background:#292e4b;border-radius:16px;' +
+    'padding:24px;margin-top:20px;">' +
+
+      '<div style="font-size:22px;font-weight:700;' +
+      'margin-bottom:12px;">' +
+        'Tout sistèm vandè yo' +
+      '</div>' +
+
+      '<div id="ventasGlobalDescription" ' +
+      'style="font-size:17px;color:#c5c9dc;' +
+      'line-height:1.5;margin-bottom:25px;">' +
+        'Chajman...' +
+      '</div>' +
+
+      '<label style="display:flex;align-items:center;' +
+      'justify-content:space-between;gap:20px;' +
+      'background:#20243e;border-radius:14px;' +
+      'padding:20px;cursor:pointer;">' +
+
+        '<span id="ventasGlobalLabel" ' +
+        'style="font-size:22px;font-weight:700;">' +
+          'Chajman...' +
+        '</span>' +
+
+        '<input id="ventasGlobalSwitch" type="checkbox" ' +
+        'style="width:34px;height:34px;cursor:pointer;">' +
+
+      '</label>' +
+
+      '<button id="ventasGlobalSave" type="button" ' +
+      'style="width:100%;margin-top:25px;padding:16px;' +
+      'background:transparent;border:2px solid #55ddea;' +
+      'border-radius:12px;color:#55ddea;font-size:21px;' +
+      'font-weight:700;cursor:pointer;">' +
+        '💾 Guardar' +
+      '</button>' +
+
+      '<div id="ventasGlobalStatus" ' +
+      'style="display:none;margin-top:18px;padding:14px;' +
+      'border-radius:10px;text-align:center;font-size:18px;' +
+      'font-weight:700;"></div>' +
+
+    '</div>';
+
+  appPage.appendChild(page);
+
+  var switchInput =
+    document.getElementById("ventasGlobalSwitch");
+
+  var label =
+    document.getElementById("ventasGlobalLabel");
+
+  var description =
+    document.getElementById("ventasGlobalDescription");
+
+  var status =
+    document.getElementById("ventasGlobalStatus");
+
+  function refreshText(){
+
+    if(switchInput.checked){
+
+      label.textContent = "AKTIVE";
+
+      label.style.color = "#55e59b";
+
+      description.textContent =
+        "Tout vandè yo ka vann nòmalman.";
+
+    }else{
+
+      label.textContent = "DEZAKTIVE";
+
+      label.style.color = "#ff647c";
+
+      description.textContent =
+        "Tout vandè yo bloke. Yo pa ka kreye okenn tikè.";
+    }
+  }
+
+  switchInput.onchange = refreshText;
+
+  document.getElementById("ventasGlobalBack").onclick =
+    function(){
+
+      page.remove();
+
+      goPage("ventas");
+    };
+
+  try{
+
+    var res = await fetch(
+      "/api/ventas-global-status?ts=" + Date.now(),
+      {
+        cache: "no-store"
+      }
+    );
+
+    var data = await res.json();
+
+    if(!data.ok){
+      throw new Error(
+        data.message || "Erreur chargement"
+      );
+    }
+
+    switchInput.checked =
+      data.enabled !== false;
+
+    refreshText();
+
+  }catch(err){
+
+    console.error(err);
+
+    status.style.display = "block";
+    status.style.background = "#5a2933";
+    status.style.color = "#ff8999";
+    status.textContent =
+      "Pa kapab chaje eta sistèm nan";
+  }
+
+  document.getElementById("ventasGlobalSave").onclick =
+    async function(){
+
+      var button =
+        document.getElementById("ventasGlobalSave");
+
+      button.disabled = true;
+      button.textContent = "Sauvegarde...";
+
+      try{
+
+        var res = await fetch(
+          "/api/ventas-global-status",
+          {
+            method: "POST",
+
+            headers: {
+              "Content-Type": "application/json"
+            },
+
+            body: JSON.stringify({
+              enabled: switchInput.checked === true
+            })
+          }
+        );
+
+        var data = await res.json();
+
+        if(!data.ok){
+          throw new Error(
+            data.message || "Erreur sauvegarde"
+          );
+        }
+
+        switchInput.checked =
+          data.enabled !== false;
+
+        refreshText();
+
+        status.style.display = "block";
+        status.style.background = "#214d3b";
+        status.style.color = "#68f0ad";
+        status.textContent =
+          switchInput.checked
+            ? "Sistèm vandè yo aktive"
+            : "Sistèm vandè yo dezaktive";
+
+      }catch(err){
+
+        console.error(err);
+
+        status.style.display = "block";
+        status.style.background = "#5a2933";
+        status.style.color = "#ff8999";
+        status.textContent =
+          "Erreur pandan sauvegarde";
+
+      }finally{
+
+        button.disabled = false;
+        button.textContent = "💾 Guardar";
+      }
+    };
+}
+
+
+
 async function openTicketConfigPage(){
 
-  const input = document.createElement("input");
+  closeSideMenu();
 
-  input.type = "file";
-  input.accept = "image/*";
+  var oldPage = document.getElementById("ticketConfigPage");
 
-  input.onchange = async () => {
+  if(oldPage){
+    oldPage.remove();
+  }
 
-    const file = input.files[0];
+  document.querySelectorAll(".page-block").forEach(function(page){
+    page.classList.add("hidden");
+    page.style.display = "none";
+  });
 
-    if(!file) return;
+  var appPage = document.getElementById("appPage");
 
-    const formData = new FormData();
+  if(!appPage) return;
 
-    formData.append("logo", file);
+  var page = document.createElement("div");
+
+  page.id = "ticketConfigPage";
+  page.className = "page-block";
+
+  page.style.cssText =
+    "display:block;padding:18px;box-sizing:border-box;" +
+    "min-height:100vh;background:#1d213d;color:#fff;";
+
+  page.innerHTML =
+    '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;">' +
+
+      '<button id="ticketConfigBack" type="button" ' +
+      'style="background:transparent;border:2px solid #846cff;color:#fff;' +
+      'border-radius:12px;font-size:24px;padding:10px 24px;cursor:pointer;">«</button>' +
+
+      '<button id="ticketConfigSave" type="button" ' +
+      'style="background:transparent;border:2px solid #55ddea;color:#55ddea;' +
+      'border-radius:12px;font-size:22px;font-weight:700;padding:12px 22px;cursor:pointer;">' +
+      '💾 Guardar' +
+      '</button>' +
+
+    '</div>' +
+
+    '<div style="font-size:34px;font-weight:700;margin-bottom:24px;">' +
+      'Ticket Config' +
+    '</div>' +
+
+    '<div style="background:#292e4b;border-radius:14px;padding:18px;margin-bottom:18px;">' +
+
+      '<div style="font-size:20px;font-weight:700;margin-bottom:14px;">Logo ticket</div>' +
+
+      '<div id="ticketLogoPreviewBox" ' +
+      'style="width:100%;min-height:150px;background:#20243e;border:1px solid #596080;' +
+      'border-radius:12px;display:flex;align-items:center;justify-content:center;' +
+      'overflow:hidden;margin-bottom:14px;">' +
+
+        '<div id="ticketLogoEmpty" style="color:#aeb4cf;font-size:17px;">' +
+          'Aucun logo sélectionné' +
+        '</div>' +
+
+        '<img id="ticketLogoPreview" alt="Logo ticket" ' +
+        'style="display:none;max-width:100%;max-height:180px;object-fit:contain;">' +
+
+      '</div>' +
+
+      '<label for="ticketLogoInput" ' +
+      'style="display:inline-block;border:2px solid #846cff;border-radius:10px;' +
+      'padding:12px 18px;color:#fff;font-size:18px;cursor:pointer;">' +
+        '📷 Choisir un logo' +
+      '</label>' +
+
+      '<input id="ticketLogoInput" type="file" accept="image/*" style="display:none;">' +
+
+    '</div>' +
+
+    '<div style="background:#292e4b;border-radius:14px;padding:18px;margin-bottom:18px;">' +
+
+      '<div style="font-size:20px;font-weight:700;margin-bottom:10px;">' +
+        'Message ticket' +
+      '</div>' +
+
+      '<textarea id="ticketMessageInput" rows="5" ' +
+      'placeholder="Écrire le message qui apparaîtra sur le ticket" ' +
+      'style="width:100%;box-sizing:border-box;background:#20243e;color:#fff;' +
+      'border:1px solid #596080;border-radius:12px;padding:14px;font-size:18px;' +
+      'resize:vertical;outline:none;"></textarea>' +
+
+    '</div>' +
+
+    '<div style="background:#292e4b;border-radius:14px;padding:18px;margin-bottom:18px;">' +
+
+      '<label style="display:flex;align-items:center;justify-content:space-between;' +
+      'gap:14px;font-size:20px;font-weight:700;cursor:pointer;">' +
+
+        '<span>Mariage gratis</span>' +
+
+        '<input id="mariageGratisEnabled" type="checkbox" ' +
+        'style="width:26px;height:26px;cursor:pointer;">' +
+
+      '</label>' +
+
+      '<div id="mariagePayoutBox" style="display:none;margin-top:20px;">' +
+
+        '<div style="font-size:18px;margin-bottom:9px;">' +
+          'Prix paiement mariage gratis' +
+        '</div>' +
+
+        '<input id="mariagePayoutInput" type="number" min="0" step="1" value="1000" ' +
+        'style="width:100%;box-sizing:border-box;background:#20243e;color:#fff;' +
+        'border:1px solid #596080;border-radius:12px;padding:14px;font-size:19px;' +
+        'outline:none;">' +
+
+      '</div>' +
+
+    '</div>' +
+
+    '<div id="ticketConfigStatus" ' +
+    'style="display:none;padding:14px;border-radius:10px;text-align:center;' +
+    'font-size:18px;font-weight:700;"></div>';
+
+  appPage.appendChild(page);
+
+  var logoInput = document.getElementById("ticketLogoInput");
+  var logoPreview = document.getElementById("ticketLogoPreview");
+  var logoEmpty = document.getElementById("ticketLogoEmpty");
+
+  var mariageEnabled =
+    document.getElementById("mariageGratisEnabled");
+
+  var mariagePayoutBox =
+    document.getElementById("mariagePayoutBox");
+
+  var statusBox =
+    document.getElementById("ticketConfigStatus");
+
+  var currentLogoUrl = "";
+  var selectedLogoFile = null;
+
+  function showStatus(message, success){
+
+    statusBox.style.display = "block";
+    statusBox.textContent = message;
+
+    statusBox.style.background =
+      success ? "#214d3b" : "#5a2933";
+
+    statusBox.style.color =
+      success ? "#68f0ad" : "#ff8999";
+  }
+
+  function updateMariageBox(){
+
+    mariagePayoutBox.style.display =
+      mariageEnabled.checked ? "block" : "none";
+  }
+
+  mariageEnabled.addEventListener("change", updateMariageBox);
+
+  logoInput.addEventListener("change", function(){
+
+    selectedLogoFile =
+      logoInput.files && logoInput.files[0]
+        ? logoInput.files[0]
+        : null;
+
+    if(!selectedLogoFile) return;
+
+    var reader = new FileReader();
+
+    reader.onload = function(e){
+
+      logoPreview.src = e.target.result;
+      logoPreview.style.display = "block";
+      logoEmpty.style.display = "none";
+    };
+
+    reader.readAsDataURL(selectedLogoFile);
+  });
+
+  document.getElementById("ticketConfigBack").onclick = function(){
+
+    page.remove();
+    goPage("ventas");
+  };
+
+  try{
+
+    var configRes = await fetch(
+      "/api/app-config?ts=" + Date.now(),
+      {
+        cache: "no-store"
+      }
+    );
+
+    var configData = await configRes.json();
+
+    if(configData.ok && configData.config){
+
+      var config = configData.config;
+
+      currentLogoUrl =
+        String(config.ticketLogo || "");
+
+      document.getElementById("ticketMessageInput").value =
+        String(config.ticketMessage || "");
+
+      var mariageConfig =
+        config.mariageGratis || {};
+
+      mariageEnabled.checked =
+        mariageConfig.enabled === true;
+
+      document.getElementById("mariagePayoutInput").value =
+        Number(mariageConfig.payout || 1000);
+
+      updateMariageBox();
+
+      if(currentLogoUrl){
+
+        logoPreview.src = currentLogoUrl;
+        logoPreview.style.display = "block";
+        logoEmpty.style.display = "none";
+      }
+    }
+
+  }catch(err){
+
+    console.error("LOAD TICKET CONFIG ERROR:", err);
+
+    showStatus(
+      "Erreur pendant le chargement de la configuration",
+      false
+    );
+  }
+
+  document.getElementById("ticketConfigSave").onclick = async function(){
+
+    var saveButton =
+      document.getElementById("ticketConfigSave");
+
+    saveButton.disabled = true;
+    saveButton.textContent = "Sauvegarde...";
+
+    statusBox.style.display = "none";
 
     try{
 
-      const uploadRes = await fetch(
-        "/api/upload-logo",
-        {
-          method:"POST",
-          body: formData
+      var logoUrl = currentLogoUrl;
+
+      if(selectedLogoFile){
+
+        var formData = new FormData();
+
+        formData.append(
+          "logo",
+          selectedLogoFile
+        );
+
+        var uploadRes = await fetch(
+          "/api/upload-logo",
+          {
+            method: "POST",
+            body: formData
+          }
+        );
+
+        var uploadData =
+          await uploadRes.json();
+
+        if(!uploadData.ok){
+
+          showStatus(
+            "Erreur upload logo",
+            false
+          );
+
+          return;
         }
+
+        logoUrl =
+          String(uploadData.url || "");
+
+        currentLogoUrl = logoUrl;
+      }
+
+      var mariagePayout = Number(
+        document.getElementById("mariagePayoutInput").value || 1000
       );
 
-      const uploadData =
-        await uploadRes.json();
+      if(!Number.isFinite(mariagePayout) || mariagePayout < 0){
 
-      if(!uploadData.ok){
-        alert("Erreur upload logo");
+        showStatus(
+          "Prix mariage gratis invalide",
+          false
+        );
+
         return;
       }
 
-      const ticketMessage = prompt(
-        "Message ticket",
-        ""
-      );
+      var payload = {
 
-      const mariageGratis =
-        confirm(
-          "Activer mariage gratis ?"
-        );
+        ticketLogo: logoUrl,
 
-    let mariagePayout = 1000;
+        ticketMessage:
+          document.getElementById("ticketMessageInput").value || "",
 
-if(mariageGratis){
-  const p = prompt(
-    "Prix paiement mariage gratis",
-    "1000"
-  );
+        mariageGratis: {
 
-  mariagePayout = Number(p || 1000);
-}
+          enabled:
+            mariageEnabled.checked === true,
 
-      const saveRes = await fetch(
+          payout:
+            mariagePayout
+        }
+      };
+
+      var saveRes = await fetch(
         "/api/app-config",
         {
-          method:"POST",
+          method: "POST",
 
-          headers:{
-            "Content-Type":
-            "application/json"
+          headers: {
+            "Content-Type": "application/json"
           },
 
-          body: JSON.stringify({
-
-            ticketLogo:
-              uploadData.url,
-
-            ticketMessage:
-              ticketMessage || "",
-
-            mariageGratis:{
-  enabled: mariageGratis,
-  payout: mariagePayout
-}
-
-          })
+          body:
+            JSON.stringify(payload)
         }
       );
 
-      const saveData =
+      var saveData =
         await saveRes.json();
 
-      if(saveData.ok){
+      if(!saveData.ok){
 
-        alert(
-          "Configuration sauvegardée"
+        showStatus(
+          saveData.message || "Erreur sauvegarde",
+          false
         );
 
-      }else{
-
-        alert("Erreur sauvegarde");
-
+        return;
       }
+
+      selectedLogoFile = null;
+      logoInput.value = "";
+
+      showStatus(
+        "Configuration sauvegardée",
+        true
+      );
 
     }catch(err){
 
-      console.error(err);
+      console.error("SAVE TICKET CONFIG ERROR:", err);
 
-      alert("Erreur système");
+      showStatus(
+        "Erreur système",
+        false
+      );
 
+    }finally{
+
+      saveButton.disabled = false;
+      saveButton.textContent = "💾 Guardar";
     }
-
   };
-
-  input.click();
-
 }
 
 function getMasterUser(){

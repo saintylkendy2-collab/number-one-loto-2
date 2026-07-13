@@ -3,6 +3,11 @@ const mongoose = require("mongoose");
 const AppConfigSchema = new mongoose.Schema({
   key: { type: String, default: "main", unique: true },
 
+  ventasGlobalEnabled: {
+  type: Boolean,
+  default: true
+},
+
   ticketLogo: { type: String, default: "" },
   ticketMessage: { type: String, default: "" },
 
