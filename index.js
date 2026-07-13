@@ -805,7 +805,10 @@ if (credit <= 0) {
   });
 }
 
-    const limites = limitesAjustes || {};
+    const limites =
+  (await Limites.findOne().lean()) ||
+  limitesAjustes ||
+  {};
 
     const bloques = Array.isArray(limites.bloqueoNumeros) ? limites.bloqueoNumeros : [];
 
@@ -1433,7 +1436,10 @@ if (clientRequestId) {
       return res.status(400).json({ ok: false, message: "Jwèt yo pa valid" });
     }
 
-const limites = limitesAjustes || {};
+const limites =
+  (await Limites.findOne().lean()) ||
+  limitesAjustes ||
+  {};
 const bloques = Array.isArray(limites.bloqueoNumeros)
   ? limites.bloqueoNumeros
   : [];
