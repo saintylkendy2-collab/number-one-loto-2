@@ -1764,28 +1764,16 @@ const vendorLimites =
   vendor.limits ||
   {};
 
-/*
-  Fonksyon sa pran non lotri ki sou chak jwèt.
-  Li verifye plizyè non posib san li pa chanje lòt lojik la.
-*/
-function getGameLotteryName(game) {
-  return String(
-    game.loteria ||
-    game.loterie ||
-    game.lottery ||
-    game.tirage ||
-    game.sorteo ||
-    game.loteriaNom ||
-    game.lotteryName ||
-    ""
-  )
-  .trim()
-  .toUpperCase();
+function normalizeLimitNumber(value) {
+  return String(value || "")
+    .trim()
+    .toUpperCase()
+    .replace(/\s+/g, "");
 }
 
 /*
-  Kalkile sa vandè a deja vann jodi a,
-  separe pa LOTRI + TIP JWÈT.
+  Kalkile kantite vandè a deja vann jodi a,
+  separe pa LOTRI + TIP JWÈT + NIMEWO.
 */
 const oldTotals = await Ticket.aggregate([
   {
@@ -1810,44 +1798,21 @@ const oldTotals = await Ticket.aggregate([
         }
       },
 
-      loteria: {
+      loterie: {
         $toUpper: {
           $trim: {
             input: {
-              $ifNull: [
-                "$jeux.loteria",
-                {
-                  $ifNull: [
-                    "$jeux.loterie",
-                    {
-                      $ifNull: [
-                        "$jeux.lottery",
-                        {
-                          $ifNull: [
-                            "$jeux.tirage",
-                            {
-                              $ifNull: [
-                                "$jeux.sorteo",
-                                {
-                                  $ifNull: [
-                                    "$jeux.loteriaNom",
-                                    {
-                                      $ifNull: [
-                                        "$jeux.lotteryName",
-                                        ""
-                                      ]
-                                    }
-                                  ]
-                                }
-                              ]
-                            }
-                          ]
-                        }
-                      ]
-                    }
-                  ]
-                }
-              ]
+              $ifNull: ["$jeux.loterie", ""]
+            }
+          }
+        }
+      },
+
+      numero: {
+        $toUpper: {
+          $trim: {
+            input: {
+              $ifNull: ["$jeux.numero", ""]
             }
           }
         }
@@ -1867,8 +1832,10 @@ const oldTotals = await Ticket.aggregate([
     $group: {
       _id: {
         type: "$type",
-        loteria: "$loteria"
+        loterie: "$loterie",
+        numero: "$numero"
       },
+
       total: {
         $sum: "$montant"
       }
@@ -1876,109 +1843,109 @@ const oldTotals = await Ticket.aggregate([
   }
 ]);
 
-const dejaVannPaLoteriaType = {};
+const dejaVannPaJeu = {};
 
 oldTotals.forEach(function(row) {
-  const type =
-    normGameType(
-      row &&
-      row._id &&
-      row._id.type
-    );
+  const type = normGameType(
+    row &&
+    row._id &&
+    row._id.type
+  );
 
-  const loteria =
-    String(
-      row &&
-      row._id &&
-      row._id.loteria ||
-      ""
-    )
+  const loterie = String(
+    row &&
+    row._id &&
+    row._id.loterie ||
+    ""
+  )
     .trim()
     .toUpperCase();
 
-  const key =
-    loteria + "|" + type;
+  const numero = normalizeLimitNumber(
+    row &&
+    row._id &&
+    row._id.numero
+  );
 
-  dejaVannPaLoteriaType[key] =
-    Number(
-      dejaVannPaLoteriaType[key] || 0
-    ) +
+  const key =
+    loterie + "|" +
+    type + "|" +
+    numero;
+
+  dejaVannPaJeu[key] =
+    Number(dejaVannPaJeu[key] || 0) +
     Number(row.total || 0);
 });
 
 /*
-  Kalkile sa ki nan nouvo tikè a,
-  separe pa LOTRI + TIP JWÈT.
+  Kalkile kantite chak nimewo ki nan nouvo tikè a.
 */
-const nouvoMontanPaLoteriaType = {};
+const nouvoMontanPaJeu = {};
 
 safeJeux.forEach(function(game) {
   const type =
     normGameType(game.type);
 
-  const loteria =
-    getGameLotteryName(game);
+  const loterie =
+    String(game.loterie || "")
+      .trim()
+      .toUpperCase();
+
+  const numero =
+    normalizeLimitNumber(game.numero);
 
   const key =
-    loteria + "|" + type;
+    loterie + "|" +
+    type + "|" +
+    numero;
 
-  if (!nouvoMontanPaLoteriaType[key]) {
-    nouvoMontanPaLoteriaType[key] = {
+  if (!nouvoMontanPaJeu[key]) {
+    nouvoMontanPaJeu[key] = {
       type: type,
-      loteria: loteria,
+      loterie: loterie,
+      numero: numero,
       montant: 0
     };
   }
 
-  nouvoMontanPaLoteriaType[key].montant +=
+  nouvoMontanPaJeu[key].montant +=
     Number(game.montant || 0);
 });
 
 /*
-  Verifye limit la pou chak LOTRI apa,
-  epi pou chak tip jwèt apa.
+  Verifye limit la separeman pou chak:
+  LOTRI + TIP JWÈT + NIMEWO.
 */
-for (
-  const key of Object.keys(
-    nouvoMontanPaLoteriaType
-  )
-) {
+for (const key of Object.keys(nouvoMontanPaJeu)) {
   const row =
-    nouvoMontanPaLoteriaType[key];
-
-  const type =
-    row.type;
-
-  const loteria =
-    row.loteria;
+    nouvoMontanPaJeu[key];
 
   const vendorLimit =
-    getLimit(vendorLimites, type);
+    getLimit(vendorLimites, row.type);
 
   if (vendorLimit <= 0) {
     continue;
   }
 
   const dejaVann =
-    Number(
-      dejaVannPaLoteriaType[key] || 0
-    );
+    Number(dejaVannPaJeu[key] || 0);
 
   const nouvoMontan =
     Number(row.montant || 0);
 
-  const totalApreTicket =
+  const totalApreTikè =
     dejaVann + nouvoMontan;
 
   const reste =
     vendorLimit - dejaVann;
 
-  if (totalApreTicket > vendorLimit) {
+  if (totalApreTikè > vendorLimit) {
     return res.status(403).json({
       ok: false,
 
       message:
-        (loteria || "LOTERIA") + "\n" +
+        row.loterie + "\n" +
+        row.type + " " + row.numero + "\n" +
         "Limit vandè a se " +
         vendorLimit.toFixed(2) + "\n" +
 
