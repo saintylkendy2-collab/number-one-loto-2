@@ -1764,11 +1764,35 @@ const vendorLimites =
   vendor.limits ||
   {};
 
-function normalizeLimitNumber(value) {
-  return String(value || "")
+function normalizeLimitNumber(value, type) {
+  let numero = String(value || "")
     .trim()
     .toUpperCase()
     .replace(/\s+/g, "");
+
+  /*
+    Pou Mariage:
+    23*25 ak 25*23 dwe konsidere kòm menm mariage la.
+  */
+  if (normGameType(type) === "MAR") {
+    const parts = numero
+      .replace(/[X×]/g, "*")
+      .split("*")
+      .filter(Boolean);
+
+    if (parts.length === 2) {
+      const a = parts[0].padStart(2, "0");
+      const b = parts[1].padStart(2, "0");
+
+      return [a, b]
+        .sort(function(x, y) {
+          return Number(x) - Number(y);
+        })
+        .join("*");
+    }
+  }
+
+  return numero;
 }
 
 /*
@@ -1861,11 +1885,12 @@ oldTotals.forEach(function(row) {
     .trim()
     .toUpperCase();
 
-  const numero = normalizeLimitNumber(
-    row &&
-    row._id &&
-    row._id.numero
-  );
+ const numero = normalizeLimitNumber(
+  row &&
+  row._id &&
+  row._id.numero,
+  type
+);
 
   const key =
     loterie + "|" +
@@ -1892,7 +1917,7 @@ safeJeux.forEach(function(game) {
       .toUpperCase();
 
   const numero =
-    normalizeLimitNumber(game.numero);
+  normalizeLimitNumber(game.numero, type);
 
   const key =
     loterie + "|" +
