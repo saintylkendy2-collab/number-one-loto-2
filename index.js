@@ -1759,21 +1759,238 @@ function getLimit(limites, type){
   return 0;
 }
 
-const vendorLimites = vendor.limites || vendor.limits || {};
+const vendorLimites =
+  vendor.limites ||
+  vendor.limits ||
+  {};
 
-for (const j of safeJeux) {
+/*
+  Fonksyon sa pran non lotri ki sou chak jwèt.
+  Li verifye plizyè non posib san li pa chanje lòt lojik la.
+*/
+function getGameLotteryName(game) {
+  return String(
+    game.loteria ||
+    game.loterie ||
+    game.lottery ||
+    game.tirage ||
+    game.sorteo ||
+    game.loteriaNom ||
+    game.lotteryName ||
+    ""
+  )
+  .trim()
+  .toUpperCase();
+}
 
-  const type = String(j.type || "").trim().toUpperCase();
+/*
+  Kalkile sa vandè a deja vann jodi a,
+  separe pa LOTRI + TIP JWÈT.
+*/
+const oldTotals = await Ticket.aggregate([
+  {
+    $match: {
+      vendeur: sellerId,
+      dateLabel: todayLabel,
+      status: { $ne: "ANILE" }
+    }
+  },
+  {
+    $unwind: "$jeux"
+  },
+  {
+    $project: {
+      type: {
+        $toUpper: {
+          $trim: {
+            input: {
+              $ifNull: ["$jeux.type", ""]
+            }
+          }
+        }
+      },
 
-  const vendorLimit = getLimit(vendorLimites, type);
+      loteria: {
+        $toUpper: {
+          $trim: {
+            input: {
+              $ifNull: [
+                "$jeux.loteria",
+                {
+                  $ifNull: [
+                    "$jeux.loterie",
+                    {
+                      $ifNull: [
+                        "$jeux.lottery",
+                        {
+                          $ifNull: [
+                            "$jeux.tirage",
+                            {
+                              $ifNull: [
+                                "$jeux.sorteo",
+                                {
+                                  $ifNull: [
+                                    "$jeux.loteriaNom",
+                                    {
+                                      $ifNull: [
+                                        "$jeux.lotteryName",
+                                        ""
+                                      ]
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          }
+        }
+      },
 
-  if (vendorLimit > 0 && Number(j.montant || 0) > vendorLimit) {
+      montant: {
+        $convert: {
+          input: "$jeux.montant",
+          to: "double",
+          onError: 0,
+          onNull: 0
+        }
+      }
+    }
+  },
+  {
+    $group: {
+      _id: {
+        type: "$type",
+        loteria: "$loteria"
+      },
+      total: {
+        $sum: "$montant"
+      }
+    }
+  }
+]);
 
+const dejaVannPaLoteriaType = {};
+
+oldTotals.forEach(function(row) {
+  const type =
+    normGameType(
+      row &&
+      row._id &&
+      row._id.type
+    );
+
+  const loteria =
+    String(
+      row &&
+      row._id &&
+      row._id.loteria ||
+      ""
+    )
+    .trim()
+    .toUpperCase();
+
+  const key =
+    loteria + "|" + type;
+
+  dejaVannPaLoteriaType[key] =
+    Number(
+      dejaVannPaLoteriaType[key] || 0
+    ) +
+    Number(row.total || 0);
+});
+
+/*
+  Kalkile sa ki nan nouvo tikè a,
+  separe pa LOTRI + TIP JWÈT.
+*/
+const nouvoMontanPaLoteriaType = {};
+
+safeJeux.forEach(function(game) {
+  const type =
+    normGameType(game.type);
+
+  const loteria =
+    getGameLotteryName(game);
+
+  const key =
+    loteria + "|" + type;
+
+  if (!nouvoMontanPaLoteriaType[key]) {
+    nouvoMontanPaLoteriaType[key] = {
+      type: type,
+      loteria: loteria,
+      montant: 0
+    };
+  }
+
+  nouvoMontanPaLoteriaType[key].montant +=
+    Number(game.montant || 0);
+});
+
+/*
+  Verifye limit la pou chak LOTRI apa,
+  epi pou chak tip jwèt apa.
+*/
+for (
+  const key of Object.keys(
+    nouvoMontanPaLoteriaType
+  )
+) {
+  const row =
+    nouvoMontanPaLoteriaType[key];
+
+  const type =
+    row.type;
+
+  const loteria =
+    row.loteria;
+
+  const vendorLimit =
+    getLimit(vendorLimites, type);
+
+  if (vendorLimit <= 0) {
+    continue;
+  }
+
+  const dejaVann =
+    Number(
+      dejaVannPaLoteriaType[key] || 0
+    );
+
+  const nouvoMontan =
+    Number(row.montant || 0);
+
+  const totalApreTicket =
+    dejaVann + nouvoMontan;
+
+  const reste =
+    vendorLimit - dejaVann;
+
+  if (totalApreTicket > vendorLimit) {
     return res.status(403).json({
-      ok:false,
-      message:"Limit vandè a se " + vendorLimit.toFixed(2)
-    });
+      ok: false,
 
+      message:
+        (loteria || "LOTERIA") + "\n" +
+        "Limit vandè a se " +
+        vendorLimit.toFixed(2) + "\n" +
+
+        "Deja vann: " +
+        dejaVann.toFixed(2) + "\n" +
+
+        "Rès disponib: " +
+        Math.max(0, reste).toFixed(2) + "\n" +
+
+        "Nouvo montan: " +
+        nouvoMontan.toFixed(2)
+    });
   }
 }
 
