@@ -1396,9 +1396,12 @@ app.post("/api/tickets", async (req, res) => {
     const jeux = Array.isArray(req.body.jeux) ? req.body.jeux : [];
     const channel = String(req.body.channel || "MANUEL").trim().toUpperCase();
 
-    const clientCreatedAt = String(req.body.clientCreatedAt || "");
-    const clientDateLabel = String(req.body.clientDateLabel || "");
-    const clientTimeLabel = String(req.body.clientTimeLabel || "");
+const clientCreatedAt = String(req.body.clientCreatedAt || "");
+
+/*
+  Dat ak lè kliyan an pa dwe sèvi pou anrejistre tikè.
+  Se server la sèlman ki kontwole dat ak lè tikè yo.
+*/
 
     const clientRequestId = String(req.body.clientRequestId || "").trim();
 
@@ -1459,7 +1462,11 @@ const bloques = Array.isArray(limites.bloqueoNumeros)
   ? limites.bloqueoNumeros
   : [];
 
-const todayLabel = clientDateLabel || new Date().toLocaleDateString("fr-FR");
+const now = new Date();
+
+const todayLabel = now.toLocaleDateString("fr-FR", {
+  timeZone: "America/New_York"
+});
 
 const lotNamesLimit = [...new Set(
   safeJeux.map(j => String(j.loterie || "").trim().toUpperCase())
@@ -2102,17 +2109,22 @@ const finalJeux = jeux
       vendeurNom: sellerName,
       vendeurConfig: vendor.config || {},
 
-      createdAt: now,
-      createdAtLabel: clientDateLabel && clientTimeLabel
-        ? clientDateLabel + " " + clientTimeLabel
-        : now.toLocaleString("fr-FR"),
+     createdAt: now,
 
-      dateLabel: clientDateLabel || now.toLocaleDateString("fr-FR"),
-      timeLabel: clientTimeLabel || now.toLocaleTimeString("fr-FR", {
-        hour: "2-digit",
-        minute: "2-digit",
-        second: "2-digit"
-      }),
+createdAtLabel: now.toLocaleString("fr-FR", {
+  timeZone: "America/New_York"
+}),
+
+dateLabel: now.toLocaleDateString("fr-FR", {
+  timeZone: "America/New_York"
+}),
+
+timeLabel: now.toLocaleTimeString("fr-FR", {
+  timeZone: "America/New_York",
+  hour: "2-digit",
+  minute: "2-digit",
+  second: "2-digit"
+}),
 
       // ✅ Tikè toujou ANATAN lè li fèt
       status: "ANATAN",
