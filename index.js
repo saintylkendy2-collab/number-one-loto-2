@@ -2441,6 +2441,33 @@ app.get("/dashboard", async (req, res) => {
 
   const vendeur = await Vendor.findOne({ id: sellerId }).lean() || {};
 
+    const serverDateParts = new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/New_York",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit"
+  }).formatToParts(new Date());
+
+  const serverYear =
+    serverDateParts.find(function(p){
+      return p.type === "year";
+    }).value;
+
+  const serverMonth =
+    serverDateParts.find(function(p){
+      return p.type === "month";
+    }).value;
+
+  const serverDay =
+    serverDateParts.find(function(p){
+      return p.type === "day";
+    }).value;
+
+  const serverTodayISO =
+    serverYear + "-" +
+    serverMonth + "-" +
+    serverDay;
+
   const sellerName = String(
     vendeur.nom || vendeur.nombre || sellerId || "VENDEUR"
   );
@@ -3187,6 +3214,9 @@ stroke-width="2.2">
 </div>
 
 <script>
+
+var SERVER_TODAY_ISO = "${serverTodayISO}";
+
 var sellerId = ${JSON.stringify(sellerId)};
 var sellerName = ${JSON.stringify(sellerName)};
 var sellerConfig = ${JSON.stringify(vendeur?.config || {})};
@@ -5119,10 +5149,9 @@ function renderRapports(){
   var box = document.getElementById("rapportsPage");
   if(!box) return;
 
-  function todayISO(){
-    var d = new Date();
-    return d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2,"0") + "-" + String(d.getDate()).padStart(2,"0");
-  }
+ function todayISO(){
+  return SERVER_TODAY_ISO;
+}
 
   function fr(iso){
     var p = String(iso || "").split("-");
