@@ -1415,6 +1415,30 @@ function normGameType(v){
   return s;
 }
 
+function sameLimitGameType(ruleType, gameType) {
+  const rule = normGameType(ruleType);
+  const game = normGameType(gameType);
+
+  // Tout opsyon Loto 4 konsidere ansanm
+  if (
+    String(rule).startsWith("L4") &&
+    String(game).startsWith("L4")
+  ) {
+    return true;
+  }
+
+  // Tout opsyon Loto 5 konsidere ansanm
+  if (
+    String(rule).startsWith("L5") &&
+    String(game).startsWith("L5")
+  ) {
+    return true;
+  }
+
+  // BOR, MAR, L3 ak lòt yo rete egzakteman menm jan
+  return rule === game;
+}
+
 function getFreeMariageCount(total){
   total = Number(total || 0);
 
@@ -1625,7 +1649,7 @@ for (const j of safeJeux) {
     if (typeof b === "string") return b.trim() === num;
 
     return String(b.numero || "").trim() === num &&
-      (!b.type || normGameType(b.type) === type);
+      (!b.type || sameLimitGameType(b.type, type));
   });
 
   if (blocked) {
@@ -1648,7 +1672,7 @@ for (const j of safeJeux) {
   else if (type === "L51" || type === "L52" || type === "L53") limit = Number(limites.loto5 || 0);
 
   const special = (limites.limiteNumeros || []).find(x =>
-    normGameType(x.type) === type &&
+    sameLimitGameType(x.type, type) &&
     String(x.numero || "").trim() === num
   );
 
@@ -1888,6 +1912,16 @@ const vendorLimites =
   vendor.limits ||
   {};
 
+  const vendorSpecialNumberLimits =
+  Array.isArray(vendorLimites.limitarNumeros)
+    ? vendorLimites.limitarNumeros
+    : [];
+
+const vendorBlockedNumbers =
+  Array.isArray(vendorLimites.bloqueoNumeros)
+    ? vendorLimites.bloqueoNumeros
+    : [];
+
 function normalizeLimitNumber(value, type) {
   let numero = String(value || "")
     .trim()
@@ -2069,8 +2103,66 @@ for (const key of Object.keys(nouvoMontanPaJeu)) {
   const row =
     nouvoMontanPaJeu[key];
 
-  const vendorLimit =
+  let vendorLimit =
     getLimit(vendorLimites, row.type);
+
+    const normalizedNumero =
+  normalizeLimitNumber(row.numero, row.type);
+
+/* Blokaj nimewo pou vandè sa sèlman */
+const isBlockedForVendor =
+  vendorBlockedNumbers.some(function(item){
+
+    if(typeof item === "string"){
+      return normalizeLimitNumber(item, row.type) ===
+        normalizedNumero;
+    }
+
+    return (
+      sameLimitGameType(item.type, row.type) &&
+      normalizeLimitNumber(
+        item.numero,
+        item.type || row.type
+      ) === normalizedNumero
+    );
+  });
+
+if(isBlockedForVendor){
+  return res.status(403).json({
+    ok: false,
+    message:
+      "❌ " + row.loterie + "\n" +
+      row.type + " " + normalizedNumero + "\n\n" +
+      "Nimewo sa bloke pou vandè sa."
+  });
+}
+
+/* Limit nòmal vandè a */
+
+  getLimit(vendorLimites, row.type);
+
+/* Limit espesyal nimewo sa pou vandè sa */
+const specialRule =
+  vendorSpecialNumberLimits.find(function(item){
+
+    return (
+      sameLimitGameType(item.type, row.type) &&
+      normalizeLimitNumber(
+        item.numero,
+        item.type || row.type
+      ) === normalizedNumero
+    );
+  });
+
+if(specialRule){
+  vendorLimit = Number(
+    specialRule.monto ||
+    specialRule.montant ||
+    specialRule.limit ||
+    specialRule.limite ||
+    0
+  );
+}
 
   if (vendorLimit <= 0) {
     continue;
@@ -2106,6 +2198,100 @@ for (const key of Object.keys(nouvoMontanPaJeu)) {
 
         "Nouvo montan: " +
         nouvoMontan.toFixed(2)
+    });
+  }
+}
+
+/* =========================================================
+   EGZIJE BOR POU MAR / L3 / L4 / L5
+   Total jwèt espesyal yo pa ka depase total BOR la
+   pou chak lotri apa.
+========================================================= */
+
+const controleBorPaLoterie = {};
+
+safeJeux.forEach(function(game){
+
+  const type = normGameType(game.type);
+
+  const loterie = String(
+    game.loterie ||
+    game.loteria ||
+    game.lottery ||
+    game.tirage ||
+    game.sorteo ||
+    ""
+  )
+  .trim()
+  .toUpperCase();
+
+  const montant = Number(game.montant || 0);
+
+  if(!controleBorPaLoterie[loterie]){
+    controleBorPaLoterie[loterie] = {
+      bor: 0,
+      autres: 0
+    };
+  }
+
+  /* Total BOR pou lotri sa */
+  if(type === "BOR"){
+    controleBorPaLoterie[loterie].bor += montant;
+    return;
+  }
+
+  /*
+    Tout lòt jwèt yo:
+    MAR, L3, L41/L42/L43, L51/L52/L53
+  */
+  if(
+    type === "MAR" ||
+    type === "L3" ||
+    String(type).startsWith("L4") ||
+    String(type).startsWith("L5")
+  ){
+    controleBorPaLoterie[loterie].autres += montant;
+  }
+});
+
+
+for(const loterie of Object.keys(controleBorPaLoterie)){
+
+  const totalBor =
+    Number(controleBorPaLoterie[loterie].bor || 0);
+
+  const totalAutres =
+    Number(controleBorPaLoterie[loterie].autres || 0);
+
+  /*
+    Gen Mariage/Loto, men pa gen BOR
+  */
+  if(totalAutres > 0 && totalBor <= 0){
+    return res.status(403).json({
+      ok: false,
+      message:
+        "❌ " + (loterie || "LOTERIA") + "\n\n" +
+        "Ou pa ka vann Mariage oswa Loto san Borlette " +
+        "nan menm lotri a."
+    });
+  }
+
+  /*
+    Total Mariage/Loto depase total BOR
+  */
+  if(totalAutres > totalBor){
+    return res.status(403).json({
+      ok: false,
+      message:
+        "❌ " + (loterie || "LOTERIA") + "\n\n" +
+        "Total Borlette: " +
+        totalBor.toFixed(2) + "\n" +
+
+        "Total Mariage/Loto: " +
+        totalAutres.toFixed(2) + "\n\n" +
+
+        "Mariage ak Loto yo pa ka depase " +
+        "total Borlette la."
     });
   }
 }

@@ -6038,6 +6038,289 @@ mensajeTicket: getValue("cfg_mensaje_ticket", ""),
   };
 }
 
+/* ===== LIMIT AK BLOKAJ NIMEWO PA VANDÈ ===== */
+
+let vendorLimiteNumeros = [];
+let vendorBloqueoNumeros = [];
+
+(function initVendorNumberRules(){
+
+  const tab = document.getElementById("tab-limite");
+
+  if(!tab || document.getElementById("vendorLimNumType")){
+    return;
+  }
+
+  const vendorRulesHTML =
+    '<div class="field-group">' +
+
+      '<label>Límite por números</label>' +
+
+      '<select id="vendorLimNumType" class="field-select">' +
+        '<option value="BOR">Borlette</option>' +
+        '<option value="MAR">Mariage</option>' +
+        '<option value="L3">Loto 3</option>' +
+        '<option value="L41">Loto 4</option>' +
+        '<option value="L51">Loto 5</option>' +
+      '</select>' +
+
+      '<input ' +
+        'id="vendorLimNumNumero" ' +
+        'class="field-input" ' +
+        'placeholder="Número">' +
+
+      '<input ' +
+        'id="vendorLimNumMonto" ' +
+        'class="field-input" ' +
+        'placeholder="Límite">' +
+
+      '<button ' +
+        'type="button" ' +
+        'class="login-btn" ' +
+        'onclick="addVendorLimiteNumero()">' +
+        '+ Ajouter limite numéro' +
+      '</button>' +
+
+      '<div id="vendorLimiteNumerosList"></div>' +
+
+    '</div>' +
+
+    '<div class="field-group">' +
+
+      '<label>Bloqueo de números</label>' +
+
+      '<select id="vendorBlockNumType" class="field-select">' +
+        '<option value="BOR">Borlette</option>' +
+        '<option value="MAR">Mariage</option>' +
+        '<option value="L3">Loto 3</option>' +
+        '<option value="L41">Loto 4</option>' +
+        '<option value="L51">Loto 5</option>' +
+      '</select>' +
+
+      '<input ' +
+        'id="vendorBlockNumNumero" ' +
+        'class="field-input" ' +
+        'placeholder="Número">' +
+
+      '<button ' +
+        'type="button" ' +
+        'class="login-btn" ' +
+        'onclick="addVendorBloqueoNumero()">' +
+        '+ Bloquer numéro' +
+      '</button>' +
+
+      '<div id="vendorBloqueoNumerosList"></div>' +
+
+    '</div>';
+
+  tab.insertAdjacentHTML(
+    "beforeend",
+    vendorRulesHTML
+  );
+
+})();
+
+function normalizeVendorRuleNumero(value, type){
+  let numero = String(value || "")
+    .trim()
+    .toUpperCase()
+    .replace(/\s+/g, "")
+    .replace(/[X×-]/g, "*");
+
+  if(String(type || "").toUpperCase() === "MAR"){
+    const parts = numero.split("*").filter(Boolean);
+
+    if(parts.length === 2){
+      const a = parts[0].padStart(2, "0");
+      const b = parts[1].padStart(2, "0");
+
+      numero = [a, b]
+        .sort(function(x, y){
+          return Number(x) - Number(y);
+        })
+        .join("*");
+    }
+  }
+
+  return numero;
+}
+
+function addVendorLimiteNumero(){
+  const type = document.getElementById("vendorLimNumType").value;
+
+  const numero = normalizeVendorRuleNumero(
+    document.getElementById("vendorLimNumNumero").value,
+    type
+  );
+
+  const monto = Number(
+    document.getElementById("vendorLimNumMonto").value || 0
+  );
+
+  if(!numero || monto <= 0){
+    alert("Antre nimewo ak limit");
+    return;
+  }
+
+  const found = vendorLimiteNumeros.find(function(x){
+    return String(x.type) === String(type) &&
+      normalizeVendorRuleNumero(x.numero, x.type) === numero;
+  });
+
+  if(found){
+    found.monto = monto;
+  }else{
+    vendorLimiteNumeros.push({
+      type: type,
+      numero: numero,
+      monto: monto
+    });
+  }
+
+  document.getElementById("vendorLimNumNumero").value = "";
+  document.getElementById("vendorLimNumMonto").value = "";
+
+  renderVendorNumberRules();
+}
+
+function addVendorBloqueoNumero(){
+  const type = document.getElementById("vendorBlockNumType").value;
+
+  const numero = normalizeVendorRuleNumero(
+    document.getElementById("vendorBlockNumNumero").value,
+    type
+  );
+
+  if(!numero){
+    alert("Antre nimewo");
+    return;
+  }
+
+  const exists = vendorBloqueoNumeros.some(function(x){
+    return String(x.type) === String(type) &&
+      normalizeVendorRuleNumero(x.numero, x.type) === numero;
+  });
+
+  if(!exists){
+    vendorBloqueoNumeros.push({
+      type: type,
+      numero: numero
+    });
+  }
+
+  document.getElementById("vendorBlockNumNumero").value = "";
+
+  renderVendorNumberRules();
+}
+
+function removeVendorLimiteNumero(index){
+  vendorLimiteNumeros.splice(index, 1);
+  renderVendorNumberRules();
+}
+
+function removeVendorBloqueoNumero(index){
+  vendorBloqueoNumeros.splice(index, 1);
+  renderVendorNumberRules();
+}
+
+function renderVendorNumberRules(){
+  const limitBox = document.getElementById("vendorLimiteNumerosList");
+  const blockBox = document.getElementById("vendorBloqueoNumerosList");
+
+  if(limitBox){
+    limitBox.innerHTML = vendorLimiteNumeros.map(function(x, i){
+      return (
+        '<div class="ticket-line">' +
+          '<span>' + safe(x.type) + '</span> ' +
+          '<span>' + safe(x.numero) + '</span> ' +
+          '<span>' + Number(x.monto || 0).toFixed(2) + ' G</span> ' +
+          '<button type="button" onclick="removeVendorLimiteNumero(' + i + ')">X</button>' +
+        '</div>'
+      );
+    }).join("");
+  }
+
+  if(blockBox){
+    blockBox.innerHTML = vendorBloqueoNumeros.map(function(x, i){
+      return (
+        '<div class="ticket-line">' +
+          '<span>' + safe(x.type) + '</span> ' +
+          '<span>' + safe(x.numero) + '</span> ' +
+          '<button type="button" onclick="removeVendorBloqueoNumero(' + i + ')">X</button>' +
+        '</div>'
+      );
+    }).join("");
+  }
+}
+
+/* Chaje lis yo lè ou ouvri yon vandè */
+const oldFillVendorFormNumberRules = fillVendorForm;
+
+fillVendorForm = function(v){
+  oldFillVendorFormNumberRules(v);
+
+  const limites = v.limites || v.limits || {};
+
+  vendorLimiteNumeros = Array.isArray(limites.limitarNumeros)
+    ? limites.limitarNumeros.map(function(x){
+        return {
+          type: String(x.type || ""),
+          numero: String(x.numero || ""),
+          monto: Number(
+            x.monto ||
+            x.montant ||
+            x.limit ||
+            x.limite ||
+            0
+          )
+        };
+      })
+    : [];
+
+  vendorBloqueoNumeros = Array.isArray(limites.bloqueoNumeros)
+    ? limites.bloqueoNumeros.map(function(x){
+        return typeof x === "string"
+          ? { type: "BOR", numero: x }
+          : {
+              type: String(x.type || ""),
+              numero: String(x.numero || "")
+            };
+      })
+    : [];
+
+  renderVendorNumberRules();
+};
+
+/* Ajoute lis yo nan done vandè a lè ou peze Guardar */
+const oldReadVendorFormNumberRules = readVendorForm;
+
+readVendorForm = function(){
+  const vendor = oldReadVendorFormNumberRules();
+
+  if(!vendor.limites){
+    vendor.limites = {};
+  }
+
+  vendor.limites.limitarNumeros =
+    vendorLimiteNumeros.map(function(x){
+      return {
+        type: String(x.type || ""),
+        numero: normalizeVendorRuleNumero(x.numero, x.type),
+        monto: Number(x.monto || 0)
+      };
+    });
+
+  vendor.limites.bloqueoNumeros =
+    vendorBloqueoNumeros.map(function(x){
+      return {
+        type: String(x.type || ""),
+        numero: normalizeVendorRuleNumero(x.numero, x.type)
+      };
+    });
+
+  return vendor;
+};
+
 async function saveVendor(){
   const vendor = readVendorForm();
 
