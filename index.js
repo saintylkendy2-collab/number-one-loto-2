@@ -2204,8 +2204,11 @@ if(specialRule){
 
 /* =========================================================
    EGZIJE BOR POU MAR / L3 / L4 / L5
-   Total jwèt espesyal yo pa ka depase total BOR la
-   pou chak lotri apa.
+
+   Règ:
+   - Dwe gen omwen yon BOR nan menm lotri a.
+   - Chak MAR oswa Loto separeman pa ka depase
+     pi gwo montan BOR ki nan menm lotri a.
 ========================================================= */
 
 const controleBorPaLoterie = {};
@@ -2229,20 +2232,27 @@ safeJeux.forEach(function(game){
 
   if(!controleBorPaLoterie[loterie]){
     controleBorPaLoterie[loterie] = {
-      bor: 0,
-      autres: 0
+      plusGwoBor: 0,
+      jeuxSpeciaux: []
     };
   }
 
-  /* Total BOR pou lotri sa */
+  /*
+    Kenbe pi gwo montan BOR la
+    pou lotri sa a.
+  */
   if(type === "BOR"){
-    controleBorPaLoterie[loterie].bor += montant;
+
+    if(montant > controleBorPaLoterie[loterie].plusGwoBor){
+      controleBorPaLoterie[loterie].plusGwoBor = montant;
+    }
+
     return;
   }
 
   /*
-    Tout lòt jwèt yo:
-    MAR, L3, L41/L42/L43, L51/L52/L53
+    Mete chak Mariage/Loto apa nan lis la.
+    Nou pap ajoute montan yo ansanm.
   */
   if(
     type === "MAR" ||
@@ -2250,23 +2260,32 @@ safeJeux.forEach(function(game){
     String(type).startsWith("L4") ||
     String(type).startsWith("L5")
   ){
-    controleBorPaLoterie[loterie].autres += montant;
+    controleBorPaLoterie[loterie].jeuxSpeciaux.push({
+      type: type,
+      numero: String(game.numero || ""),
+      montant: montant
+    });
   }
 });
 
 
 for(const loterie of Object.keys(controleBorPaLoterie)){
 
-  const totalBor =
-    Number(controleBorPaLoterie[loterie].bor || 0);
+  const data = controleBorPaLoterie[loterie];
 
-  const totalAutres =
-    Number(controleBorPaLoterie[loterie].autres || 0);
+  const plusGwoBor =
+    Number(data.plusGwoBor || 0);
+
+  const jeuxSpeciaux =
+    Array.isArray(data.jeuxSpeciaux)
+      ? data.jeuxSpeciaux
+      : [];
 
   /*
-    Gen Mariage/Loto, men pa gen BOR
+    Gen Mariage/Loto, men pa gen okenn BOR.
   */
-  if(totalAutres > 0 && totalBor <= 0){
+  if(jeuxSpeciaux.length > 0 && plusGwoBor <= 0){
+
     return res.status(403).json({
       ok: false,
       message:
@@ -2277,22 +2296,31 @@ for(const loterie of Object.keys(controleBorPaLoterie)){
   }
 
   /*
-    Total Mariage/Loto depase total BOR
+    Verifye chak Mariage/Loto separeman.
   */
-  if(totalAutres > totalBor){
-    return res.status(403).json({
-      ok: false,
-      message:
-        "❌ " + (loterie || "LOTERIA") + "\n\n" +
-        "Total Borlette: " +
-        totalBor.toFixed(2) + "\n" +
+  for(const jeu of jeuxSpeciaux){
 
-        "Total Mariage/Loto: " +
-        totalAutres.toFixed(2) + "\n\n" +
+    const montantJeu =
+      Number(jeu.montant || 0);
 
-        "Mariage ak Loto yo pa ka depase " +
-        "total Borlette la."
-    });
+    if(montantJeu > plusGwoBor){
+
+      return res.status(403).json({
+        ok: false,
+        message:
+          "❌ " + (loterie || "LOTERIA") + "\n\n" +
+
+          jeu.type + " " +
+          jeu.numero + ": " +
+          montantJeu.toFixed(2) + "\n" +
+
+          "Pi gwo Borlette: " +
+          plusGwoBor.toFixed(2) + "\n\n" +
+
+          "Montan Mariage oswa Loto a pa ka depase " +
+          "pi gwo montan Borlette la."
+      });
+    }
   }
 }
 
