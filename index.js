@@ -213,7 +213,7 @@ font-weight:700;
 }
 
 function detectDeviceInfo(userAgent = "") {
-  const ua = String(userAgent || "");
+  const ua = String(userAgent || "").trim();
   const low = ua.toLowerCase();
 
   let marca = "DESCONOCIDO";
@@ -225,39 +225,156 @@ function detectDeviceInfo(userAgent = "") {
     marca = "APPLE";
     modelo = "IPHONE";
     place = "TEL";
+
+    const iosMatch = ua.match(/OS\s+(\d+(?:[_\.]\d+)*)/i);
+
+    if (iosMatch) {
+      version = iosMatch[1].replace(/_/g, ".");
+    }
+
   } else if (low.includes("ipad")) {
     marca = "APPLE";
     modelo = "IPAD";
     place = "TAB";
+
+    const iosMatch = ua.match(/OS\s+(\d+(?:[_\.]\d+)*)/i);
+
+    if (iosMatch) {
+      version = iosMatch[1].replace(/_/g, ".");
+    }
+
   } else if (low.includes("android")) {
-    marca = "ANDROID";
-    modelo = "ANDROID";
     place = "TEL";
+
+    /*
+      Pran vrè vèsyon Android lan.
+      Egzanp: Android 7.1.1
+    */
+    const androidVersionMatch =
+      ua.match(/Android\s+([0-9]+(?:\.[0-9]+)*)/i);
+
+    if (androidVersionMatch) {
+      version = androidVersionMatch[1];
+    }
+
+    /*
+      Pran modèl aparèy la nan user-agent lan.
+      Egzanp:
+      Android 7.1.1; V2 Build/...
+      Android 8.1.0; Q2i Build/...
+      Android 13; H10S Build/...
+    */
+    let modelMatch =
+      ua.match(
+        /Android\s+[0-9.]+;\s*(?:[a-z]{2}[-_][a-z]{2};\s*)?([^;)]+?)(?:\s+Build\/|;|\))/i
+      );
+
+    if (modelMatch) {
+      modelo = String(modelMatch[1] || "")
+        .replace(/\s+wv$/i, "")
+        .trim()
+        .toUpperCase();
+    } else {
+      modelo = "ANDROID";
+    }
+
+    /*
+      Detèmine mak la avèk modèl la.
+      Sa pa chanje okenn lòt lojik koneksyon.
+    */
+    const modelLow = modelo.toLowerCase();
+
+    if (
+      modelLow === "v2" ||
+      modelLow.includes("sunmi")
+    ) {
+      marca = "SUNMI";
+
+    } else if (
+      modelLow.includes("h10")
+    ) {
+      marca = "H10S";
+
+    } else if (
+      modelLow.includes("q2i") ||
+      low.includes("alps")
+    ) {
+      marca = "ALPS";
+
+    } else if (modelLow.includes("samsung")) {
+      marca = "SAMSUNG";
+
+    } else if (
+      modelLow.startsWith("sm-") ||
+      modelLow.startsWith("gt-")
+    ) {
+      marca = "SAMSUNG";
+
+    } else if (
+      modelLow.includes("huawei") ||
+      modelLow.startsWith("ane-") ||
+      modelLow.startsWith("lya-")
+    ) {
+      marca = "HUAWEI";
+
+    } else if (
+      modelLow.includes("xiaomi") ||
+      modelLow.includes("redmi") ||
+      modelLow.includes("poco")
+    ) {
+      marca = "XIAOMI";
+
+    } else if (
+      modelLow.includes("motorola") ||
+      modelLow.startsWith("moto ")
+    ) {
+      marca = "MOTOROLA";
+
+    } else {
+      marca = modelo !== "ANDROID"
+        ? modelo.split(" ")[0]
+        : "ANDROID";
+    }
+
   } else if (low.includes("windows")) {
     marca = "PC";
     modelo = "WINDOWS";
     place = "PC";
-  } else if (low.includes("macintosh") || low.includes("mac os")) {
+
+    const windowsMatch =
+      ua.match(/Windows NT\s+([0-9.]+)/i);
+
+    if (windowsMatch) {
+      version = windowsMatch[1];
+    }
+
+  } else if (
+    low.includes("macintosh") ||
+    low.includes("mac os")
+  ) {
     marca = "APPLE";
     modelo = "MAC";
     place = "PC";
+
+    const macMatch =
+      ua.match(/Mac OS X\s+([0-9_]+)/i);
+
+    if (macMatch) {
+      version = macMatch[1].replace(/_/g, ".");
+    }
+
   } else if (low.includes("linux")) {
     marca = "PC";
     modelo = "LINUX";
     place = "PC";
   }
 
-  const chromeMatch = ua.match(/Chrome\/(\d+)/i);
-  const safariMatch = ua.match(/Version\/(\d+)/i);
-  const firefoxMatch = ua.match(/Firefox\/(\d+)/i);
-  const edgMatch = ua.match(/Edg\/(\d+)/i);
-
-  if (chromeMatch) version = chromeMatch[1];
-  else if (safariMatch) version = safariMatch[1];
-  else if (firefoxMatch) version = firefoxMatch[1];
-  else if (edgMatch) version = edgMatch[1];
-
-  return { marca, modelo, version, place };
+  return {
+    marca: marca,
+    modelo: modelo,
+    version: version,
+    place: place
+  };
 }
 
 function getClientIp(req) {
