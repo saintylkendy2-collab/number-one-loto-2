@@ -2826,8 +2826,10 @@ body{color:#111;}
   height:100dvh;
   box-sizing:border-box;
   padding-top:env(safe-area-inset-top, 0px);
+  padding-bottom:env(safe-area-inset-bottom, 0px);
   display:flex;
   flex-direction:column;
+}
 .topbar{
 height:56px;
 min-height:56px;
