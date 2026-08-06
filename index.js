@@ -2808,7 +2808,7 @@ app.get("/dashboard", async (req, res) => {
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Vendeur</title>
 <style>
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
@@ -2823,9 +2823,11 @@ background:#efeff4;
 }
 body{color:#111;}
 .app{
-height:100vh;
-display:flex;
-flex-direction:column;
+  height:100dvh;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top, 0px);
+  display:flex;
+  flex-direction:column;
 .topbar{
 height:56px;
 min-height:56px;
