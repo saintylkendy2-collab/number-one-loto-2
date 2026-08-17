@@ -3577,6 +3577,17 @@ var numero = "";
 var montant = "";
 var jeux = [];
 var selectedLoteries = [];
+
+try{
+  var saved = JSON.parse(
+    localStorage.getItem("selectedLoteries_" + sellerId) || "[]"
+  );
+
+  if(Array.isArray(saved)){
+    selectedLoteries = saved;
+  }
+}catch(e){}
+
 var cursorNumero = 0;
 var cursorMontant = 0;
 var pendingChoiceNumber = "";
@@ -4971,6 +4982,11 @@ function shareWhatsApp(){
     var url = "https://wa.me/?text=" + encodeURIComponent(text);
 
     window.location.href = url;
+
+    localStorage.setItem(
+  "selectedLoteries_" + sellerId,
+  JSON.stringify(selectedLoteries)
+);
 
     loadBillets();
     resetAfterSend();
