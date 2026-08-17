@@ -4819,7 +4819,6 @@ function resetAfterSend(){
  montant = "";
  cursorNumero = 0;
  cursorMontant = 0;
- selectedLoteries = [];
 
  currentTicketRequestId = null;
 
