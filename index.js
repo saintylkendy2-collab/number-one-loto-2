@@ -3597,6 +3597,16 @@ var currentPageName = "salePage";
 
 var loteries = [];
 
+try{
+  var savedLoteries = JSON.parse(
+    localStorage.getItem("vendorLoteries_" + sellerId) || "[]"
+  );
+
+  if(Array.isArray(savedLoteries) && savedLoteries.length){
+    loteries = savedLoteries;
+  }
+}catch(e){}
+
 function getSelectedLoteriesText(){
  return selectedLoteries.length ? selectedLoteries.join(", ") : "";
 }
@@ -7122,6 +7132,11 @@ async function loadVendorLoteries(){
           estatus: l.estatus || "Activo"
         };
       });
+
+      localStorage.setItem(
+        "vendorLoteries_" + sellerId,
+        JSON.stringify(loteries)
+      );
     }
   }catch(err){
     console.error("Erreur load loteries:", err);
