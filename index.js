@@ -7122,7 +7122,23 @@ async function loadVendorLoteries(){
           estatus: l.estatus || "Activo"
         };
       });
+
+      selectedLoteries = selectedLoteries.filter(function(name){
+        var lot = loteries.find(function(l){
+          return l.name === name;
+        });
+
+        return lot && getLoteriaState(lot).open;
+      });
+
+      localStorage.setItem(
+        "selectedLoteries_" + sellerId,
+        JSON.stringify(selectedLoteries)
+      );
+
+      updateFields();
     }
+
   }catch(err){
     console.error("Erreur load loteries:", err);
   }
