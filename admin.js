@@ -4269,9 +4269,6 @@ function renderTicketsReport(){
   var oldDate = safe(byId("ticketFilterDate") ? byId("ticketFilterDate").value : "") || todayISO();
   var oldVendor = safe(byId("ticketFilterVendor") ? byId("ticketFilterVendor").value : "");
   var oldStatus = safe(byId("ticketFilterStatus") ? byId("ticketFilterStatus").value : "");
-  var oldLoteria = safe(
-  byId("ticketFilterLoteria") ? byId("ticketFilterLoteria").value : ""
-);
 
   var vendorOptions = '<option value="">-</option>';
 
@@ -4308,11 +4305,6 @@ vendorsAlphabetiques.forEach(function(v){
       vendorOptions +
     '</select>' +
 
-        '<label>Lotería</label>' +
-    '<select class="filter-select" id="ticketFilterLoteria" onchange="renderTicketsReport()">' +
-      '<option value="">-</option>' +
-    '</select>' +
-
     '<label>Estatus</label>' +
     '<select class="filter-select" id="ticketFilterStatus" onchange="renderTicketsReport()">' +
       '<option value="">-</option>' +
@@ -4324,28 +4316,6 @@ vendorsAlphabetiques.forEach(function(v){
 
   setValue("ticketFilterVendor", oldVendor);
   setValue("ticketFilterStatus", oldStatus);
-  var loteriaSelect = byId("ticketFilterLoteria");
-var reportLoterias = new Set();
-
-loteriasList.forEach(function(l){
-  var name = safe(l).trim().toUpperCase();
-  if(name && name !== "TODAS") reportLoterias.add(name);
-});
-
-ticketsRows.forEach(function(t){
-  (Array.isArray(t.jeux) ? t.jeux : []).forEach(function(j){
-    var name = safe(j && j.loterie).trim().toUpperCase();
-    if(name) reportLoterias.add(name);
-  });
-});
-
-if(oldLoteria) reportLoterias.add(oldLoteria);
-
-reportLoterias.forEach(function(name){
-  loteriaSelect.add(new Option(name, name));
-});
-
-setValue("ticketFilterLoteria", oldLoteria);
 
   var rows = ticketsRows.slice();
 
@@ -4371,9 +4341,6 @@ setValue("ticketFilterLoteria", oldLoteria);
     if(oldDate && day !== oldDate) return false;
     if(oldVendor && safe(t.vendeur) !== oldVendor) return false;
     if(oldStatus && safe(t.status).toUpperCase() !== oldStatus) return false;
-    if(oldLoteria && !(Array.isArray(t.jeux) ? t.jeux : []).some(function(j){
-  return safe(j && j.loterie).trim().toUpperCase() === oldLoteria;
-})) return false;
 
     return true;
   });
