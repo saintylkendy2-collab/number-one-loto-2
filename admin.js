@@ -657,169 +657,119 @@ map[id].premios += parseAmount(t.premios);
 
 
 router.get("/api/reportes/balance", async (req, res) => {
-  const debutBalance = Date.now();
-
   try {
     const date = String(req.query.date || "").trim();
 
     function toISODate(value) {
       if (!value) return "";
-
       const s = String(value).trim();
 
-      if (/^\d{4}-\d{2}-\d{2}$/.test(s)) {
-        return s;
-      }
+      if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
 
       const p = s.split("/");
-
       if (p.length === 3) {
-        return (
-          p[2] +
-          "-" +
-          p[1].padStart(2, "0") +
-          "-" +
-          p[0].padStart(2, "0")
-        );
+        return p[2] + "-" + p[1].padStart(2, "0") + "-" + p[0].padStart(2, "0");
       }
 
       const d = new Date(s);
+      if (isNaN(d.getTime())) return "";
 
-      if (isNaN(d.getTime())) {
-        return "";
-      }
-
-      return (
-        d.getFullYear() +
-        "-" +
-        String(d.getMonth() + 1).padStart(2, "0") +
-        "-" +
-        String(d.getDate()).padStart(2, "0")
-      );
+      return d.getFullYear() + "-" +
+        String(d.getMonth() + 1).padStart(2, "0") + "-" +
+        String(d.getDate()).padStart(2, "0");
     }
 
     function movementEffect(m) {
-      const tipo = String(m?.tipo || "").toLowerCase();
-      const monto = parseAmount(m?.monto);
-
+      const tipo = String(m.tipo || "").toLowerCase();
+      const monto = parseAmount(m.monto);
       return tipo === "cobro" ? monto : -monto;
+    }
+
+    function ticketDay(t) {
+      if (t.dateLabel) return toISODate(t.dateLabel);
+
+      const d = new Date(t.createdAt || Date.now());
+      return d.getFullYear() + "-" +
+        String(d.getMonth() + 1).padStart(2, "0") + "-" +
+        String(d.getDate()).padStart(2, "0");
+    }
+
+    function sorteoKey(date, loteria) {
+      return String(date || "").trim() + "||" + String(loteria || "").trim().toUpperCase();
     }
 
     const selectedDate = date || toISODate(new Date());
 
-    const [vendorsArr, ticketAgg] = await Promise.all([
-      Vendor.find({}).lean(),
+   const [vendorsArr, ticketAgg] = await Promise.all([
+  Vendor.find().lean(),
 
-      Ticket.aggregate([
-        {
-          $project: {
-            vendeur: 1,
-            status: {
-              $toUpper: {
-                $trim: {
-                  input: { $ifNull: ["$status", ""] }
-                }
-              }
-            },
-            total: {
-              $convert: {
-                input: "$total",
-                to: "double",
-                onError: 0,
-                onNull: 0
-              }
-            },
-            premio: {
-              $convert: {
-                input: "$premio",
-                to: "double",
-                onError: 0,
-                onNull: 0
-              }
-            },
-            isoDate: {
-              $concat: [
-                { $substrBytes: [{ $ifNull: ["$dateLabel", ""] }, 6, 4] },
-                "-",
-                { $substrBytes: [{ $ifNull: ["$dateLabel", ""] }, 3, 2] },
-                "-",
-                { $substrBytes: [{ $ifNull: ["$dateLabel", ""] }, 0, 2] }
-              ]
-            }
-          }
-        },
-
-        {
-          $match: {
-            isoDate: { $lte: selectedDate },
-            status: { $ne: "ANILE" }
-          }
-        },
-
-        {
-          $group: {
-            _id: "$vendeur",
-
-            ventaTotal: {
-              $sum: "$total"
-            },
-
-            premiosTotal: {
-              $sum: {
-                $cond: [
-                  { $eq: ["$status", "GANYE"] },
-                  "$premio",
-                  0
-                ]
-              }
-            }
+  Ticket.aggregate([
+    {
+      $project: {
+        vendeur: 1,
+        status: 1,
+        total: 1,
+        premio: 1,
+        isoDate: {
+          $concat: [
+            { $substr: ["$dateLabel", 6, 4] },
+            "-",
+            { $substr: ["$dateLabel", 3, 2] },
+            "-",
+            { $substr: ["$dateLabel", 0, 2] }
+          ]
+        }
+      }
+    },
+    {
+      $match: {
+        isoDate: { $lte: selectedDate }
+      }
+    },
+    {
+      $group: {
+        _id: "$vendeur",
+        tickets: {
+          $push: {
+            status: "$status",
+            total: "$total",
+            premio: "$premio"
           }
         }
-      ]).allowDiskUse(true)
-    ]);
-
-    const vendeurs = {};
-
-    for (const v of vendorsArr) {
-      const id = String(v?.id || "").trim().toUpperCase();
-
-      if (id) {
-        vendeurs[id] = v;
       }
     }
+  ])
+]);
+
+    const vendeurs = {};
+    vendorsArr.forEach(v => {
+      const id = String(v.id || "").trim().toUpperCase();
+      if (id) vendeurs[id] = v;
+    });
+
+
 
     const map = {};
 
-    for (const id of Object.keys(vendeurs)) {
+    Object.keys(vendeurs).forEach((id) => {
       const vendor = normalizeVendor(vendeurs[id] || {});
-      const movimientos = Array.isArray(vendor.movimientos)
-        ? vendor.movimientos
-        : [];
+      const movimientos = Array.isArray(vendor.movimientos) ? vendor.movimientos : [];
 
       const allMovementsTotal = movimientos.reduce((s, m) => {
         return s + movementEffect(m);
       }, 0);
 
-      const baseBalance =
-        parseAmount(vendor.balance) - allMovementsTotal;
+      const baseBalance = parseAmount(vendor.balance) - allMovementsTotal;
 
       const movementsUntilDate = movimientos.reduce((s, m) => {
-        const d = toISODate(m?.fecha);
-
-        if (selectedDate && d && d > selectedDate) {
-          return s;
-        }
-
+        const d = toISODate(m.fecha);
+        if (selectedDate && d && d > selectedDate) return s;
         return s + movementEffect(m);
       }, 0);
 
-      const filteredMovements = movimientos.filter((m) => {
-        const d = toISODate(m?.fecha);
-
-        if (selectedDate && d && d > selectedDate) {
-          return false;
-        }
-
+      const filteredMovements = movimientos.filter(m => {
+        const d = toISODate(m.fecha);
+        if (selectedDate && d && d > selectedDate) return false;
         return true;
       });
 
@@ -831,72 +781,60 @@ router.get("/api/reportes/balance", async (req, res) => {
         estatus: vendor.estatus || "Activo",
 
         collectionsLivrees: filteredMovements
-          .filter(
-            (m) =>
-              String(m?.tipo || "").toLowerCase() !== "cobro"
-          )
-          .map((m) => ({
-            fecha: toISODate(m?.fecha),
-            monto: parseAmount(m?.monto),
-            tipo: String(m?.tipo || "")
+          .filter(m => String(m.tipo || "").toLowerCase() !== "cobro")
+          .map(m => ({
+            fecha: toISODate(m.fecha),
+            monto: parseAmount(m.monto),
+            tipo: String(m.tipo || "")
           })),
 
         paiementsRecus: filteredMovements
-          .filter(
-            (m) =>
-              String(m?.tipo || "").toLowerCase() === "cobro"
-          )
-          .map((m) => ({
-            fecha: toISODate(m?.fecha),
-            monto: parseAmount(m?.monto),
-            tipo: String(m?.tipo || "")
+          .filter(m => String(m.tipo || "").toLowerCase() === "cobro")
+          .map(m => ({
+            fecha: toISODate(m.fecha),
+            monto: parseAmount(m.monto),
+            tipo: String(m.tipo || "")
           }))
       };
-    }
+    });
 
-    for (const group of ticketAgg) {
-      const id = String(group?._id || "")
-        .trim()
-        .toUpperCase();
+ for (const group of ticketAgg) {
+  const id = String(group._id || "").trim().toUpperCase();
+  if (!id) continue;
 
-      if (!id) {
-        continue;
-      }
+  if (!map[id]) {
+    map[id] = {
+      id,
+      nombre: id,
+      zona: "",
+      balance: 0,
+      estatus: "Activo",
+      collectionsLivrees: [],
+      paiementsRecus: []
+    };
+  }
 
-      if (!map[id]) {
-        map[id] = {
-          id,
-          nombre: id,
-          zona: "",
-          balance: 0,
-          estatus: "Activo",
-          collectionsLivrees: [],
-          paiementsRecus: []
-        };
-      }
+  const vendor = normalizeVendor(vendeurs[id] || {});
+  const rate = getCommissionRate(vendor);
 
-      const vendor = normalizeVendor(vendeurs[id] || {});
-      const rate = getCommissionRate(vendor);
+  for (const t of group.tickets || []) {
+    const status = String(t.status || "").trim().toUpperCase();
 
-      const venta = parseAmount(group.ventaTotal);
+    if (status !== "ANILE") {
+      const venta = parseAmount(t.total);
       const comision = (venta * rate) / 100;
-      const premios = parseAmount(group.premiosTotal);
+      const premios = status === "GANYE" ? parseAmount(t.premio) : 0;
 
       map[id].balance += venta - comision - premios;
     }
+  }
+}
 
-    console.log(
-      "✅ BALANCE OPTIMISÉ:",
-      Date.now() - debutBalance,
-      "ms | dat:",
-      selectedDate
-    );
+    res.json(Object.values(map));
 
-    return res.json(Object.values(map));
   } catch (err) {
     console.error("Erreur balance:", err);
-
-    return res.status(500).json([]);
+    res.status(500).json([]);
   }
 });
 
@@ -4331,9 +4269,6 @@ function renderTicketsReport(){
   var oldDate = safe(byId("ticketFilterDate") ? byId("ticketFilterDate").value : "") || todayISO();
   var oldVendor = safe(byId("ticketFilterVendor") ? byId("ticketFilterVendor").value : "");
   var oldStatus = safe(byId("ticketFilterStatus") ? byId("ticketFilterStatus").value : "");
-  var oldLoteria = safe(
-  byId("ticketFilterLoteria") ? byId("ticketFilterLoteria").value : ""
-);
 
   var vendorOptions = '<option value="">-</option>';
 
@@ -4370,11 +4305,6 @@ vendorsAlphabetiques.forEach(function(v){
       vendorOptions +
     '</select>' +
 
-        '<label>Lotería</label>' +
-    '<select class="filter-select" id="ticketFilterLoteria" onchange="renderTicketsReport()">' +
-      '<option value="">-</option>' +
-    '</select>' +
-
     '<label>Estatus</label>' +
     '<select class="filter-select" id="ticketFilterStatus" onchange="renderTicketsReport()">' +
       '<option value="">-</option>' +
@@ -4386,28 +4316,6 @@ vendorsAlphabetiques.forEach(function(v){
 
   setValue("ticketFilterVendor", oldVendor);
   setValue("ticketFilterStatus", oldStatus);
-  var loteriaSelect = byId("ticketFilterLoteria");
-var reportLoterias = new Set();
-
-loteriasList.forEach(function(l){
-  var name = safe(l).trim().toUpperCase();
-  if(name && name !== "TODAS") reportLoterias.add(name);
-});
-
-ticketsRows.forEach(function(t){
-  (Array.isArray(t.jeux) ? t.jeux : []).forEach(function(j){
-    var name = safe(j && j.loterie).trim().toUpperCase();
-    if(name) reportLoterias.add(name);
-  });
-});
-
-if(oldLoteria) reportLoterias.add(oldLoteria);
-
-reportLoterias.forEach(function(name){
-  loteriaSelect.add(new Option(name, name));
-});
-
-setValue("ticketFilterLoteria", oldLoteria);
 
   var rows = ticketsRows.slice();
 
@@ -4433,9 +4341,6 @@ setValue("ticketFilterLoteria", oldLoteria);
     if(oldDate && day !== oldDate) return false;
     if(oldVendor && safe(t.vendeur) !== oldVendor) return false;
     if(oldStatus && safe(t.status).toUpperCase() !== oldStatus) return false;
-    if(oldLoteria && !(Array.isArray(t.jeux) ? t.jeux : []).some(function(j){
-  return safe(j && j.loterie).trim().toUpperCase() === oldLoteria;
-})) return false;
 
     return true;
   });
