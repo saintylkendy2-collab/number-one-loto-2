@@ -3577,17 +3577,6 @@ var numero = "";
 var montant = "";
 var jeux = [];
 var selectedLoteries = [];
-
-try{
-  var saved = JSON.parse(
-    localStorage.getItem("selectedLoteries_" + sellerId) || "[]"
-  );
-
-  if(Array.isArray(saved)){
-    selectedLoteries = saved;
-  }
-}catch(e){}
-
 var cursorNumero = 0;
 var cursorMontant = 0;
 var pendingChoiceNumber = "";
@@ -4982,11 +4971,6 @@ function shareWhatsApp(){
     var url = "https://wa.me/?text=" + encodeURIComponent(text);
 
     window.location.href = url;
-
-    localStorage.setItem(
-  "selectedLoteries_" + sellerId,
-  JSON.stringify(selectedLoteries)
-);
 
     loadBillets();
     resetAfterSend();
@@ -7122,23 +7106,7 @@ async function loadVendorLoteries(){
           estatus: l.estatus || "Activo"
         };
       });
-
-      selectedLoteries = selectedLoteries.filter(function(name){
-        var lot = loteries.find(function(l){
-          return l.name === name;
-        });
-
-        return lot && getLoteriaState(lot).open;
-      });
-
-      localStorage.setItem(
-        "selectedLoteries_" + sellerId,
-        JSON.stringify(selectedLoteries)
-      );
-
-      updateFields();
     }
-
   }catch(err){
     console.error("Erreur load loteries:", err);
   }
@@ -7687,92 +7655,7 @@ app.get("/api/reportes/tickets", async (req, res) => {
 });
 
 
-app.get("/api/reportes/jugadas-resumen", async (req, res) => {
-  const debut = Date.now();
-  try {
-    const start = String(req.query.start || "").trim();
-    const end = String(req.query.end || "").trim();
-    const timezone = String(req.query.timezone || "UTC");
-    const validDate = value => !value || (
-      /^\d{4}-\d{2}-\d{2}$/.test(value) &&
-      Number.isFinite(Date.parse(value)) &&
-      new Date(value).toISOString().slice(0, 10) === value
-    );
-    if (!validDate(start) || !validDate(end) || (start && end && start > end)) {
-      return res.status(400).json({ error: "Rango de fechas inválido" });
-    }
-    // Same dateLabel-first rule as the former browser calculation.
-    const asString = field => ({ $convert: { input: field, to: "string", onError: "", onNull: "" } });
-    const day = {
-      $let: {
-        vars: { parts: { $split: [asString("$dateLabel"), "/"] } },
-        in: { $cond: [
-          { $eq: [{ $size: "$$parts" }, 3] },
-          { $concat: [
-            { $arrayElemAt: ["$$parts", 2] }, "-",
-            { $let: { vars: { m: { $arrayElemAt: ["$$parts", 1] } }, in: {
-              $cond: [{ $lt: [{ $strLenCP: "$$m" }, 2] }, { $concat: ["0", "$$m"] }, "$$m"]
-            } } }, "-",
-            { $let: { vars: { d: { $arrayElemAt: ["$$parts", 0] } }, in: {
-              $cond: [{ $lt: [{ $strLenCP: "$$d" }, 2] }, { $concat: ["0", "$$d"] }, "$$d"]
-            } } }
-          ] },
-          { $dateToString: { date: "$createdAt", format: "%Y-%m-%d", timezone, onNull: "" } }
-        ] }
-      }
-    };
-    const conditions = [];
-    if (start) conditions.push({ $gte: [day, start] });
-    if (end) conditions.push({ $lte: [day, end] });
-    const query = conditions.length ? { $expr: { $and: conditions } } : {};
-    // Canonical labels use dateLabel's index; retain legacy/fallback dates too.
-    if (start && end) {
-      const labels = [];
-      const from = new Date(start + "T00:00:00Z");
-      const to = new Date(end + "T00:00:00Z");
-      if ((to - from) / 86400000 <= 3660) {
-        for (let d = from; d <= to; d.setUTCDate(d.getUTCDate() + 1)) {
-          labels.push(String(d.getUTCDate()).padStart(2, "0") + "/" +
-            String(d.getUTCMonth() + 1).padStart(2, "0") + "/" + d.getUTCFullYear());
-        }
-        query.$or = [
-          { dateLabel: { $in: labels } },
-          { dateLabel: { $not: /^\d{2}\/\d{2}\/\d{4}$/ }, $expr: { $and: conditions } }
-        ];
-        delete query.$expr;
-      }
-    }
-    const rows = await Ticket.aggregate([
-      { $match: query },
-      { $match: { $expr: { $ne: [{ $toUpper: asString("$status") }, "ANILE"] } } },
-      { $unwind: "$jeux" },
-      { $project: {
-        vendeur: { $toUpper: asString("$vendeur") },
-        loteria: { $toUpper: asString("$jeux.loterie") },
-        type: { $toUpper: asString("$jeux.type") },
-        numero: { $trim: { input: asString("$jeux.numero") } },
-        montant: { $convert: {
-          input: { $trim: { input: { $replaceAll: {
-            input: asString("$jeux.montant"), find: ",", replacement: ""
-          } } } }, to: "double", onError: 0, onNull: 0
-        } }
-      } },
-      { $group: {
-        _id: { vendeur: "$vendeur", loteria: "$loteria", type: "$type", numero: "$numero" },
-        count: { $sum: 1 }, venta: { $sum: "$montant" }
-      } },
-      { $project: {
-        _id: 0, vendeur: "$_id.vendeur", loteria: "$_id.loteria",
-        type: "$_id.type", numero: "$_id.numero", count: 1, venta: 1
-      } }
-    ]);
-    console.log("[RESUMEN]", Date.now() - debut, "ms | Liy:", rows.length, "|", start, end);
-    return res.json(rows);
-  } catch (err) {
-    console.error("Erreur jugadas-resumen:", err);
-    return res.status(500).json({ error: "No se pudo cargar el reporte" });
-  }
-});
+
 
 const adminRoutes = require("./admin");
 app.use(adminRoutes);
