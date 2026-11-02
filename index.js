@@ -3577,6 +3577,12 @@ var numero = "";
 var montant = "";
 var jeux = [];
 var selectedLoteries = [];
+try {
+  var saved = JSON.parse(
+    localStorage.getItem("selectedLoteries_" + sellerId) || "[]"
+  );
+  if (Array.isArray(saved)) selectedLoteries = saved;
+} catch (e) {}
 var cursorNumero = 0;
 var cursorMontant = 0;
 var pendingChoiceNumber = "";
@@ -3585,6 +3591,35 @@ var savedTickets = [];
 var currentPageName = "salePage";
 
 var loteries = [];
+function advanceSelectedLoteries() {
+  if (!loteries.length || !selectedLoteries.length) return;
+
+  var kantite = selectedLoteries.length;
+
+  var ouvè = loteries
+    .filter(function(l) { return getLoteriaState(l).open; })
+    .sort(function(a, b) {
+      return getLoteriaState(a).minutesLeft -
+             getLoteriaState(b).minutesLeft;
+    });
+
+  var chwa = selectedLoteries.filter(function(name) {
+    return ouvè.some(function(l) { return l.name === name; });
+  });
+
+  ouvè.forEach(function(l) {
+    if (chwa.length < kantite && chwa.indexOf(l.name) < 0) {
+      chwa.push(l.name);
+    }
+  });
+
+  selectedLoteries = chwa;
+  localStorage.setItem(
+    "selectedLoteries_" + sellerId,
+    JSON.stringify(selectedLoteries)
+  );
+  updateFields();
+}
 
 function getSelectedLoteriesText(){
  return selectedLoteries.length ? selectedLoteries.join(", ") : "";
@@ -4814,6 +4849,8 @@ return code + "\\n" + lines.join("\\n") + "\\n" + code;
 let currentTicketRequestId = null;
 
 function resetAfterSend(){
+localStorage.setItem("selectedLoteries_" + sellerId, JSON.stringify(selectedLoteries));
+
  jeux = [];
  numero = "";
  montant = "";
@@ -4971,6 +5008,8 @@ function shareWhatsApp(){
     var url = "https://wa.me/?text=" + encodeURIComponent(text);
 
     window.location.href = url;
+
+    localStorage.setItem("selectedLoteries_" + sellerId, JSON.stringify(selectedLoteries));
 
     loadBillets();
     resetAfterSend();
@@ -7106,6 +7145,7 @@ async function loadVendorLoteries(){
           estatus: l.estatus || "Activo"
         };
       });
+      advanceSelectedLoteries();
     }
   }catch(err){
     console.error("Erreur load loteries:", err);
