@@ -1045,7 +1045,6 @@ router.get("/ventas-document", async (req, res) => {
     let totalComisionGrupo = 0;
     let totalComision = 0;
     let totalPremios = 0;
-    let totalComision = 0;
     let totalResultado = 0;
 
     const rowsHtml = rows.map((r, i) => {
@@ -5109,6 +5108,7 @@ async function openHomeDashboard(){
   const map = {};
   let totalVenta = 0;
   let totalPremios = 0;
+  let totalComision = 0;
   let totalResultado = 0;
 
   let evaluados = 0;
