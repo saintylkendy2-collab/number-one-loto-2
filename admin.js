@@ -3343,6 +3343,20 @@ tbody tr:nth-child(even){background:#313652;}
     </div>
 
     <div class="field-group">
+  <div class="field-label">Límites para una lotería específica</div>
+  <select id="limLotSelect" class="field-select" onchange="showLimiteLoteria()">
+    <option value="">Seleccionar lotería</option>
+  </select>
+  <input id="limLotBorlette" class="field-input" type="number" min="0" placeholder="Borlette">
+  <input id="limLotMariage" class="field-input" type="number" min="0" placeholder="Mariage">
+  <input id="limLotLoto3" class="field-input" type="number" min="0" placeholder="Loto 3">
+  <input id="limLotLoto4" class="field-input" type="number" min="0" placeholder="Loto 4">
+  <input id="limLotLoto5" class="field-input" type="number" min="0" placeholder="Loto 5">
+  <button class="login-btn" onclick="addLimiteLoteria()">+ Añadir / modificar lotería</button>
+  <div id="limitesLoteriasList"></div>
+</div>
+
+    <div class="field-group">
       <div class="field-label">Límite por números</div>
       <select id="limNumType" class="field-select">
         <option value="BOR">Borlette</option>
@@ -7077,6 +7091,85 @@ function downloadExcel(){
 let limiteNumeros = [];
 let bloqueoNumeros = [];
 
+let limitesPorLoteria = [];
+
+const camposLimiteLoteria = [
+  ["borlette", "limLotBorlette"],
+  ["mariage", "limLotMariage"],
+  ["loto3", "limLotLoto3"],
+  ["loto4", "limLotLoto4"],
+  ["loto5", "limLotLoto5"]
+];
+
+function showLimiteLoteria(){
+  const nombre = byId("limLotSelect").value;
+  const row = limitesPorLoteria.find(x => x.loterie === nombre);
+
+  camposLimiteLoteria.forEach(([campo, id]) => {
+    byId(id).value = row && row[campo] !== undefined ? row[campo] : "";
+  });
+}
+
+function renderLimitesLoterias(){
+  const box = byId("limitesLoteriasList");
+  box.innerHTML = "";
+
+  limitesPorLoteria.forEach((row, i) => {
+    const line = document.createElement("div");
+    line.className = "ticket-line";
+    line.textContent = row.loterie + " — " +
+      camposLimiteLoteria
+        .filter(([campo]) => row[campo] !== undefined)
+        .map(([campo]) => campo + ": " + row[campo])
+        .join(" | ");
+
+    const button = document.createElement("button");
+    button.textContent = "X";
+    button.onclick = function(){
+      limitesPorLoteria.splice(i, 1);
+      renderLimitesLoterias();
+      showLimiteLoteria();
+    };
+
+    line.appendChild(button);
+    box.appendChild(line);
+  });
+}
+
+function addLimiteLoteria(){
+  const loterie = byId("limLotSelect").value.trim().toUpperCase();
+  if(!loterie){
+    alert("Chwazi yon lotri");
+    return;
+  }
+
+  const row = { loterie };
+
+  for(const [campo, id] of camposLimiteLoteria){
+    const value = byId(id).value.trim();
+    if(value === "") continue;
+
+    const amount = Number(value);
+    if(!Number.isFinite(amount) || amount < 0){
+      alert("Limit yo dwe 0 oswa yon nimewo pozitif");
+      return;
+    }
+    row[campo] = amount;
+  }
+
+  if(Object.keys(row).length === 1){
+    alert("Antre omwen yon limit");
+    return;
+  }
+
+  const i = limitesPorLoteria.findIndex(x => x.loterie === loterie);
+  if(i >= 0) limitesPorLoteria[i] = row;
+  else limitesPorLoteria.push(row);
+
+  renderLimitesLoterias();
+  alert("Lotri a pare. Peze Guardar pou sove l.");
+}
+
 function addLimiteNumero(){
   const type = byId("limNumType").value;
   const numero = byId("limNumNumero").value.trim();
@@ -7179,6 +7272,25 @@ async function loadLimitesAjustes(){
   limiteNumeros = Array.isArray(l.limiteNumeros) ? l.limiteNumeros : [];
   bloqueoNumeros = Array.isArray(l.bloqueoNumeros) ? l.bloqueoNumeros : [];
 
+  limitesPorLoteria = Array.isArray(l.limitesPorLoteria)
+    ? l.limitesPorLoteria : [];
+  renderLimitesLoterias();
+
+  try{
+    const lotRes = await fetch("/api/loterias");
+    const lotRows = await lotRes.json();
+    const select = byId("limLotSelect");
+    select.innerHTML = '<option value="">Seleccionar lotería</option>';
+
+    if(Array.isArray(lotRows)){
+      lotRows.forEach(x => {
+        if(x.name) select.add(new Option(x.name, x.name.toUpperCase()));
+      });
+    }
+  }catch(err){
+    console.error("Erreur load loterías:", err);
+  }
+
   renderLimiteNumeros();
   renderBloqueoNumeros();
 }
@@ -7197,7 +7309,7 @@ async function saveLimitesAjustes(){
       loto3: Number(byId("limite_loto3").value || 0),
       loto4: Number(byId("limite_loto4").value || 0),
       loto5: Number(byId("limite_loto5").value || 0),
-
+limitesPorLoteria,
       limiteNumeros,
       bloqueoNumeros
     };

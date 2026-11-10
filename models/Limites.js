@@ -7,6 +7,11 @@ const limiteSchema = new mongoose.Schema({
   loto4: { type:Number, default:0 },
   loto5: { type:Number, default:0 },
 
+    limitesPorLoteria: {
+    type: Array,
+    default: []
+  },
+
   limiteNumeros: {
     type:Array,
     default:[]
